@@ -71,7 +71,7 @@ Use this structure for every new entry:
 
 ## Version 0.001 - Starting Docs (initial repository push)
 
-**Date:** 2026-05-31 | **Commit(s):** 278cecf | **Stats:** 16 files changed, 771 insertions(+), 1,997 deletions(-)
+**Date:** 2026-05-31 | **Commit(s):** 04eaaa7 | **Stats:** 16 files changed, 771 insertions(+), 1,997 deletions(-)
 
 ### Summary
 
@@ -100,7 +100,7 @@ Use this structure for every new entry:
 
 ## Version 0.000 - Template Docs (not a release)
 
-**Date:** 2026-05-30 | **Commit(s):** 1561bb5 | **Stats:** 199 files changed, 18,798 insertions(+)
+**Date:** 2026-05-30 | **Commit(s):** fa4ffdd | **Stats:** 199 files changed, 18,798 insertions(+) (`.cursor/mcp.json` removed from history — contained secrets)
 
 > **Not a gameplay or app release.** This commit imported documentation templates, agent skills, and Cursor config from prior projects. Use it only as provenance for file origins — do not treat version `0.000` as shipped product state.
 
@@ -115,7 +115,8 @@ Use this structure for every new entry:
 - **NEW FILE:** `docs/versionlog.md` (123 lines) - version log guide (winemaker-oriented at import time).
 - **NEW FILE:** `docs/CONTEXT.md`, `docs/PROJECT_INFO.md`, `docs/VariableRelationshipMap.md`, `docs/AIdocs/*` - imported templates.
 - **NEW FILE:** `skills/` tree - `webgamedev-gram`, superpowers, best-practices bundles.
-- **NEW FILE:** `.cursor/mcp.json`, `.cursor/rules/`, `.cursor/plans/` (since removed or superseded).
+- **NEW FILE:** `.cursor/rules/`, `.cursor/plans/` (plans since removed in 0.001).
+- MCP config is **not** tracked — use **NEW FILE:** `.cursor/mcp.json.example` (added after initial push) locally copied to gitignored `.cursor/mcp.json`.
 
 ### Notes
 

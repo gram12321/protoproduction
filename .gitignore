@@ -1,0 +1,11 @@
+# Local MCP config (may contain secrets — copy from mcp.json.example)
+.cursor/mcp.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies / build (when app exists)
+node_modules/
+dist/
