@@ -13,6 +13,9 @@ npm install
 npm run dev
 ```
 
+Open the app through the Vite dev server URL, normally `http://localhost:5173/`.
+Do not open the repo root `index.html` with a `file://` URL. This project uses Vite module loading, so direct file opening will fail with browser CORS/security errors.
+
 Useful checks once package scripts exist:
 
 ```bash

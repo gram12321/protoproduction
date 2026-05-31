@@ -9,3 +9,4 @@
 # Dependencies / build (when app exists)
 node_modules/
 dist/
+*.tsbuildinfo
