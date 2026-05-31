@@ -16,6 +16,14 @@ Canonical agent rules for this project. Keep the rule body mirrored across `docs
 
 Before non-trivial work, read the smallest relevant subset of those files. Do not assume planned folders or services exist; check the repo first.
 
+## Plugin And Skill Precedence
+
+- Repo-local skills under `.agents/skills/` are authoritative for this project.
+- When a repo-local skill overlaps with a plugin-provided skill, use the repo-local skill.
+- Do not use generic plugin workflows such as Game Studio or default Superpowers when `.agents/skills/webgamedev-gram/SKILL.md` routes to a local specialist instead.
+- Use plugins for their tools and external integrations, such as GitHub, Gmail, Google Calendar, browser testing, or frontend tooling, when the task actually needs those capabilities.
+- Use plugin-provided skills only when the user explicitly asks for that plugin workflow or no repo-local skill covers the task.
+
 ## Response Start
 
 Start user-facing work with:

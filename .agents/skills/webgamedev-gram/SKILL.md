@@ -12,6 +12,8 @@ This is the default repo skill for this project. It is both:
 1. The project-convention guardrail skill.
 2. The router skill that selects other local skills based on the task.
 
+This repo-local router takes precedence over similarly named plugin workflows. Prefer the local skills under `.agents/skills/` over plugin-provided Game Studio, default Superpowers, or broad web-app workflows unless the user explicitly asks for those plugin workflows or a plugin tool is needed.
+
 Route directly to a specialist skill when the task is already clear. Use the `superpowers` umbrella only when you want the broader governance layer first, or when the task needs explicit skill-selection discipline before picking the subskill.
 
 ## Session Start
