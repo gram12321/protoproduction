@@ -47,6 +47,7 @@ After classifying the user request, route to the matching specialist skills.
 | Rendered frontend QA, UI regression reproduction, interaction checks | `../superpowers/systematic-debugging/SKILL.md` | none |
 | Bug reports, regressions, failing tests, unexpected behavior | `../superpowers/systematic-debugging/SKILL.md` | `../superpowers/diagnose/SKILL.md` |
 | Database query, schema, index, or RLS performance concerns | `../best-practices/supabase-best-practices/SKILL.md` | repo migration/database tooling guidance |
+| User asks for minimal change, small steps, low ceremony, or narrow scope | `../toolsskills/small-steps/SKILL.md` | `../toolsskills/caveman/SKILL.md` when terse style is also requested |
 | About to claim completion or fixed status | `../superpowers/verification-before-completion/SKILL.md` | `../superpowers/requesting-code-review/SKILL.md` |
 | Writing or fixing skills | `../toolsskills/writeskills-gram/SKILL.md` | none |
 | Architecture-level refactor opportunities | `../superpowers/improve-codebase-architecture/SKILL.md` | none |
