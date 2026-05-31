@@ -27,7 +27,7 @@ Use `1` for a clear, low-risk request and `5` for ambiguous or broad work.
 Before changing code, read the smallest relevant set of docs:
 
 1. `readme.md`
-2. `CONTEXT.md`
+2. `docs/CONTEXT.md`
 3. `docs/AIdocs/AIDescriptions_coregame.md`
 4. `docs/PROJECT_INFO.md`
 
@@ -82,7 +82,7 @@ The following are non-default here and should primarily be used via the superpow
 - Keep pages and UI components focused on presentation and interaction.
 - Prefer barrel imports from `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
 - Use shared types from `src/lib/types/` and `src/components/UItypes.ts`.
-- Follow current domain terminology from `CONTEXT.md`.
+- Follow domain terminology from `docs/CONTEXT.md` once defined; do not reuse winery-specific terms from the prior project.
 - Do not add legacy data-shape support unless explicitly requested.
 - Keep persisted gameplay data company-scoped via current company flow.
 - Services should trigger global updates for state changes.
@@ -105,18 +105,21 @@ The following are non-default here and should primarily be used via the superpow
 
 ## Key Locations
 
+Planned layout from the shared stack workflow. Paths may not exist yet in this repo.
+
 | Area | Path |
 |---|---|
 | Core types | `src/lib/types/types.ts` |
 | UI types | `src/components/UItypes.ts` |
 | Core services | `src/lib/services/core/` |
 | Domain services | `src/lib/services/<domain>/` |
-| Sales services | `src/lib/services/sales/` |
-| Finance services | `src/lib/services/finance/`, `src/lib/services/user/` |
-| Activity services | `src/lib/services/activity/` |
 | Database layer | `src/lib/database/` |
 | Game constants | `src/lib/constants/` |
-| Domain constants | `src/lib/constants/` |
+| Pages | `src/components/pages/` |
+| Shared UI | `src/components/ui/` |
+| Hooks | `src/hooks/` |
+| Automated tests | `tests/` |
+| Migrations | `migrations/` |
 
 ## Domain Workflows
 
@@ -133,25 +136,12 @@ The following are non-default here and should primarily be used via the superpow
 3. Keep DB access in `src/lib/database/` only.
 4. Keep page components orchestration-focused.
 
-### Feature State Changes
-
-1. Add feature constants under `src/lib/constants/`.
-2. Update behavior under the owning service in `src/lib/services/`.
-3. Update shared types only when persisted shape changes.
-4. Update related UI components as needed.
-
-### Contract Requirement Changes
-
-1. Update `ContractRequirement` typing and requirement constants.
-2. Implement validation in sales/contracts services.
-3. Keep requirement categories separate unless explicitly redesigning.
-4. Update relevant docs when variable relationships change.
-
 ## Documentation Maintenance
 
 After implementation:
 
-- Update `CONTEXT.md` when terminology/variables/constants change.
+- Update `docs/CONTEXT.md` when new domain terminology, variables, or constants are defined.
+- Update `docs/VariableRelationshipMap.md` when variable dependencies are documented.
 - Update `docs/PROJECT_INFO.md` when files/modules move or ownership changes.
 - Update `docs/AIdocs/AIDescriptions_coregame.md` when implementation status changes.
 - Keep `readme.md` concise.
@@ -206,4 +196,4 @@ npm test
 git diff --check
 ```
 
-For docs passes, also search for stale names across `docs`, `readme.md`, `CONTEXT.md`, `src`, and `tests`.
+For docs passes, also search for stale names across `docs`, `readme.md`, `docs/CONTEXT.md`, `src`, and `tests`.

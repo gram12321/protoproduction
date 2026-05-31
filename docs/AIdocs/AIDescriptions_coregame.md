@@ -1,239 +1,213 @@
-# Core Game Mechanics - Winery Management Game
+# Core Game Mechanics — Implementation Orientation
 
-Last code-verified: 2026-05-27
+Last updated: 2026-05-30  
+Status: Bootstrap — domain gameplay systems are not defined in this repo yet. This file describes **stack, architecture, and shared infrastructure** to preserve from the prior project workflow.
 
-This document describes the current mainline Winemaker 0.4 implementation. It is an orientation file for agents and maintainers: use it to understand what exists now, where systems live, and which older design ideas are not active runtime behavior.
+Use this to see what patterns exist, where shared code should live, and what is **not** authoritative until `docs/CONTEXT.md` and code confirm it.
 
-Design docs under `docs/superpowers/plans/` and `docs/superpowers/specs/` are useful history, but they are not authoritative unless this file, `CONTEXT.md`, `readme.md`, or the code confirms the feature is currently active.
+Design docs under `docs/superpowers/plans/` and `docs/superpowers/specs/` are history from prior work unless this file, `docs/CONTEXT.md`, `readme.md`, or the code says otherwise.
 
 ## Current Architecture
 
-- The app is a React, Vite, TypeScript, Tailwind, ShadCN UI, and Supabase single-player management game.
-- The simulation advances manually by week through `processGameTick()` in `src/lib/services/core/gameTick.ts`.
-- Gameplay rules live in `src/lib/services/`; Supabase access lives in `src/lib/database/`; React components should stay focused on display, UI state, and user interaction.
-- Company-scoped play is the core persistence model. Database calls should follow the active-company/current-company flow rather than global state assumptions.
-- Feature seams exist under `src/lib/features/`. `loanLender` and `researchUpgrade` are active seams; `boardShare` is currently a no-op shell preserving future share/board integration points.
-- Shared gameplay language is current around `structureIndex`, `tasteQualityIndex`, `wineScore`, compact `WineAnchorValues`, company prestige, vineyard prestige, and research unlocks.
+- React, Vite, TypeScript, Tailwind, ShadCN UI, and Supabase single-player management game (resource production simulation — details TBD).
+- Simulation advances manually by week through `processGameTick()` in `src/lib/services/core/gameTick.ts` (when implemented).
+- Gameplay rules live in `src/lib/services/`; Supabase access lives in `src/lib/database/`; React components handle display, UI state, and interaction.
+- **Company-scoped play** is the core persistence model. Database calls follow active-company / current-company flow, not global assumptions.
+- Feature seams under `src/lib/features/` (e.g. `loanLender`, `researchUpgrade`) isolate optional subsystems.
+- Domain vocabulary belongs in `docs/CONTEXT.md`. Do not assume winery-specific terms (`structureIndex`, `wineScore`, etc.) until defined there.
 
 ## Database And Persistence
 
 Supabase is the persistent store. Database modules are CRUD/mapper layers and should not contain business rules.
 
-Implemented database areas:
+**Intended layout** (paths may not all exist yet):
 
-- `src/lib/database/core/`: companies, users, game state, staff, teams, transactions, notifications, achievements, highscores, user settings, wine log, research unlocks, loans/lenders, company metric history, board satisfaction history, and share scaffolding.
-- `src/lib/database/activities/`: active activities, wine batch inventory, and vineyard persistence.
-- `src/lib/database/customers/`: customers, sales orders, relationship boosts, and prestige event ledger rows.
-- `src/lib/database/sales/`: contracts, forward contracts, grape buyer/supplier markets, buy-market offers, and buyer/supplier loyalty.
-- `src/lib/database/dbMapperUtils.ts`: shared mapping helpers for database row conversions.
-- `migrations/`: SQL history for database updates.
+| Area | Path | Role |
+|---|---|---|
+| Core | `src/lib/database/core/` | Companies, users, game state, staff, teams, transactions, notifications, achievements, highscores, settings, log, research unlocks, loans/lenders, metric history, share scaffolding |
+| Activities / inventory | `src/lib/database/activities/` | Active activities, batch/inventory records, facility persistence |
+| Customers / prestige | `src/lib/database/customers/` | Customers, sales orders, relationship boosts, prestige event ledger |
+| Sales / markets | `src/lib/database/sales/` | Contracts, forward contracts, commodity markets, loyalty |
+| Shared mapping | `src/lib/database/dbMapperUtils.ts` | Row ↔ domain mapping helpers, if needed |
+| Migrations | `migrations/` | SQL for schema updates |
 
-Important persistence notes:
+**Persistence rules** (carry forward):
 
-- `prestige_events` is the source ledger for prestige; current prestige values should be derived from persisted events and decay logic, not invented locally.
-- Wine batches use compact anchor values for hidden wine identity. Database parsing accepts the current compact anchor keys only; do not add legacy-shape fallbacks unless explicitly requested.
-- Services that mutate persisted state should trigger global or topic-scoped UI refreshes through the existing update hooks.
-- Some public-company/share tables and constants remain as scaffolding from prior work, but the active mainline runtime does not expose a full share market or board gameplay loop.
+- If prestige uses an event ledger (`prestige_events`), current prestige is **derived** from persisted events and decay — not invented in UI.
+- Compact identity blobs (hidden product/batch identity) should document accepted keys in `CONTEXT.md`; unknown keys ignored at parse time unless explicitly requested otherwise.
+- Services that mutate persisted state should trigger global or topic-scoped UI refresh via existing update hooks.
+- Public-company / share-market tables may exist as scaffolding; treat as inactive until runtime is wired.
 
 ## Player Interface And UI
 
-The primary router is `src/App.tsx`. It switches between pages and overlays after a company is selected.
+Primary router: `src/App.tsx` — pages and overlays after company selection.
 
-Main UI surfaces:
+**UI patterns to preserve** (rename pages when domain exists):
 
-- Layout: `Header`, `ActivityPanel`, `NotificationCenter`, `GlobalSearchResultsDisplay`, and app-level optional feature overlays.
-- Pages: `Login`, `CompanyOverview`, `Vineyard`, `Winery`, `Sales`, `Finance`, `Research`, `Staff`, `WeatherCenter`, `WineLog`, `Winepedia`, `Achievements`, `Highscores`, `Profile`, `Settings`, and the dev-gated `AdminDashboard`.
-- Sales UI: orders, contracts, and wine cellar tabs under `src/components/pages/sales/`, plus wine assignment and forward/pre-sale contract actions.
-- Finance UI: finance statements, cash flow, income/balance views, staff wage summary, loan/lender surfaces, founder panel, and research panel.
-- Winepedia UI: reference tabs for countries, regions, grape varieties, customers, customer types, economy, grape buyers, weather, research, winemaking, wine quality, mathematical models, yield projection, and scoring explanations.
-- Activity modals: land search/results, planting, clearing, harvest, crushing, fermentation, staff search/results, hiring, staff assignment, sell grapes, and buy from market.
-- Domain modals/components: wine, vineyard, staff, prestige, structure index, land value modifier, feature display, taste profile, taste wheel, taste quality breakdown, market offer tables, and constraint displays.
+| Category | Typical locations | Notes |
+|---|---|---|
+| Layout | `src/components/layout/` | Header, activity panel, notification center, global search |
+| Pages | `src/components/pages/` | Overview, production, sales, finance, research, staff, reference/wiki, achievements, highscores, profile, settings |
+| Sales sub-UI | `src/components/pages/sales/` | Orders, contracts, inventory/cellar tabs, assignment modals |
+| Finance sub-UI | `src/components/finance/` | Statements, cash flow, wages, loan/lender surfaces, founder/ownership panel, research panel |
+| Reference / wiki | `src/components/pages/<reference>/` | Static or semi-static game reference (economy, weather, scoring explainers) |
+| Activity modals | `src/components/ui/activities/` | Search/results, hiring, processing steps, market buy/sell |
+| Domain modals | `src/components/ui/` | Product/batch, facility, staff, prestige, quality breakdowns, constraints |
 
-UI rule of thumb: pages and components can orchestrate user actions and presentation, but calculations, validation, persistence, and progression belong in services and database modules.
+**UI rule:** pages orchestrate actions and presentation; calculations, validation, persistence, and progression belong in services and database modules.
 
 ## Utility And Shared Infrastructure
 
-Shared hooks:
+### Hooks
 
-- `useGameState()` and `useGameStateWithData()` provide reactive game-state and async data loading.
-- `useGameUpdates()` exposes global and topic-scoped update subscriptions plus debounced refresh triggers.
-- `useLoadingState()`, table sorting, customer data, wine price calculation, wine structure/combined score, wine feature details, prestige updates, and relationship updates are shared hook patterns.
+| Hook / pattern | Purpose |
+|---|---|
+| `useGameState()`, `useGameStateWithData()` | Reactive game state and async data loading |
+| `useGameUpdates()` | Global and topic-scoped update subscriptions, debounced refresh |
+| `useLoadingState()` | Shared loading UX |
+| Table sorting, relationship/prestige update hooks | Reuse when present for the domain |
 
-Shared utilities:
+### Utilities
 
-- `src/lib/utils/calculator.ts`: common game formulas.
-- `src/lib/utils/companyUtils.ts`: current-company helpers used by database/service flows.
-- `src/lib/utils/colorMapping.ts`, `icons.tsx`, `toast.ts`, `modalState.ts`, and `consistencyUtils.ts`: UI and presentation support.
-- `src/lib/constants/`: tunable gameplay definitions for time, grapes, vineyards, wine features, taste labels, contracts, economy, finance, loans, credit rating, shares, staff, research, achievements, and starting conditions.
-- Barrel exports in `src/lib/services/index.ts`, `src/lib/constants/index.ts`, `src/lib/database/index.ts`, `src/lib/utils/index.ts`, `src/components/ui/index.ts`, and `src/hooks/index.ts` should be preferred where they match the local pattern.
+| Path | Purpose |
+|---|---|
+| `src/lib/utils/calculator.ts` | Shared game formulas |
+| `src/lib/utils/companyUtils.ts` | Current-company helpers for DB/service flows |
+| `src/lib/utils/colorMapping.ts`, `icons.tsx`, `toast.ts`, `modalState.ts`, `consistencyUtils.ts` | UI and presentation support |
+| `src/lib/constants/` | Tunable gameplay definitions (time, economy, finance, staff, research, achievements, starting conditions, domain-specific constants as added) |
+| Barrel exports | `src/lib/services/index.ts`, `src/lib/constants/index.ts`, `src/lib/database/index.ts`, `src/lib/utils/index.ts`, `src/components/ui/index.ts`, `src/hooks/index.ts` |
 
-Testing and dev support:
+### Testing and dev support
 
-- Vitest suites under `tests/` cover user flows, wine, vineyard, sales, contracts, prestige, research, finance, staff, and admin/test-lab behavior.
-- `/api/test-run` and `server/test-runner.ts` bridge the dev-only automated test runner.
-- Admin Test Lab scenarios create inspectable active-company fixture states and clean them up through `testlab_...` run ids.
+- Vitest under `tests/` — mirror service domains (`tests/core/`, `tests/finance/`, `tests/sales/`, etc.).
+- Dev-only `/api/test-run` and `server/test-runner.ts` for automated suite from Admin UI.
+- Admin Test Lab: active-company fixtures, `testlab_...` run ids for durable cleanup.
+- Admin Dashboard loopback-gated (`localhost` / dev mode only).
 
-## Implemented Runtime Systems
+## Shared Runtime Systems (pattern-level)
 
-### Time, Weather, And Economy
+These are **architectural intentions** from the prior stack. Mark implemented / deferred per repo when wiring Proto Production.
 
-- Game time tracks week, season, and year.
-- Weekly tick advances activities, orders, contracts, forward contracts, vines, prestige decay, economy/weather state, and seasonal/yearly finance hooks.
-- Economy phases influence finance, contracts, and market behavior.
-- Weather has current state, intensity, forecast pattern, forecast confidence, and next-week forecast fields.
-- Weather affects grape market price/limit pressure and vineyard health/ripeness deviations.
-- Weather Center summarizes current vineyard weather impact through `weatherCenterService.ts` and `WeatherCenter.tsx`.
-- Winepedia includes weather reference material.
+### Time, overlays, and economy
 
-Deferred weather layers:
+| System | Intended behavior |
+|---|---|
+| Game time | Week, season, year |
+| Weekly tick | Activities, orders, contracts, forward contracts, overlay state, prestige decay, seasonal/yearly finance hooks |
+| Economy phases | Influence finance, contracts, market pressure |
+| Weather (if used) | State, intensity, forecast pattern/confidence, next-week forecast; bounded impact on production readiness and market volatility |
+| Overlay UI | Dedicated page or tab summarizing impact per site/facility |
 
-- Severe weather event chains, player response actions, weather research upgrades, and weather achievements are future work.
+Deferred overlay layers (example): severe event chains, player mitigation actions, overlay-specific research, overlay achievements.
 
-### Vineyard
+### Production domain (placeholder)
 
-- Land search, vineyard buying, planting, clearing, uprooting/replanting pressure, health, overgrowth, ripeness, vine age, and yield calculation are implemented.
-- Vineyard suitability uses country/region, altitude, aspect, soil, grape metadata, density, health, and ripeness.
-- Vineyard weather impact is deterministic and explainable through `weatherImpactService.ts` and `weatherCenterService.ts`.
-- Research gates enforce vineyard size, total-hectare, and vineyard-count caps.
-- Vineyard prestige contributes to land value modifier, vineyard pricing, achievements, and UI presentation.
+When defined in `CONTEXT.md`, document here:
 
-### Wine Production, Structure, And Taste
+- Facility/site setup and maintenance
+- Resource extraction or harvest boundary (creates batch/lot + snapshots)
+- Processing pipeline (steps, methods, progress)
+- Inventory states (raw → WIP → finished)
+- Quality layers and aggregate score (see `docs/VariableRelationshipMap.md`)
+- Features / risks / lifecycle after completion
+- Reference UI for types, economy, scoring math
 
-- Wine batches progress through grapes, must, wine, and bottled states.
-- Production includes crushing, fermentation method, fermentation temperature, fermentation progress, aging, and bottling flows.
-- `WineAnchorValues` provide hidden wine identity; visible characteristics and scoring are derived from the current anchor model and process effects.
-- Structure uses six channels: acidity, aroma, body, spice, sweetness, and tannins.
-- `structureIndex` scores physical balance through dynamic ranges, penalties, and synergies.
-- Taste uses 14 flavor families plus descriptor display values.
-- `tasteQualityIndex` scores family-level taste balance; descriptors remain display-only.
-- `wineScore` is currently `(tasteQualityIndex + structureIndex) / 2`.
-- Wine features are config-driven and include positive features, faults, lifecycle effects, oxidation, terroir, stuck fermentation, bottle aging, late harvest, green flavor, grey rot, and noble rot.
+**Do not** copy prior winery pipeline names into new code without updating `CONTEXT.md`.
 
-Deferred wine layers:
+### Sales, contracts, and commodity markets (placeholder)
 
-- Storage vessels and detailed cellar/container logistics are not implemented.
-- Descriptor-level scoring and customer taste preferences remain deferred until structure and taste can share a unified preference layer.
+| System | Intended behavior |
+|---|---|
+| Customer generation | Regional customers, traits, orders, relationships, partial fulfillment |
+| Contracts | Requirements tied to documented quality/site/type/characteristic fields |
+| Commodity markets | Buy/sell side, bulk fallback, seasonal rows, loyalty, economy/overlay pressure |
+| Forward pre-sales | Generated by market/NPC rules; scale with company value/prestige; delivery/expiration/default handling |
+| Finance linkage | Advance, settlement, penalty transaction categories |
 
-### Sales, Contracts, Grape Markets, And Forward Pre-sales
+Deferred (example): broad dynamic consumer demand, market saturation models.
 
-- Regional customer generation, customer traits, orders, relationship tracking, partial fulfillment, and rejection are implemented.
-- Contract sales support taste, structure, site, grape, color, vintage, and characteristic requirements.
-- Taste/site split is active: `tasteQuality` validates computed taste quality, while `landValue`, `country`, `region`, `altitude`, and `aspect` validate site/origin requirements.
-- Sell-side grape market is implemented through `sellGrapesService.ts`, `grapeBuyerMarketService.ts`, and buyer loyalty.
-- Buy-side grape market is implemented through `buyGrapeMarketService.ts`, supplier market services, buy-market offers, and supplier loyalty.
-- Bulk fallback channels and seasonal buyers/suppliers exist.
-- Grape market pricing and seasonal hard limits respond to season, economy phase, weather state/intensity, grape/state quality, relationships, and research unlocks.
-- Bulk grape achievements and research gates are wired into achievement and research services.
+### Finance, loans, ownership
 
-Forward pre-sale contracts are implemented:
+| System | Intended behavior |
+|---|---|
+| Core finance | Transactions, income/balance/cash flow, asset valuation |
+| Loans | `loanLender` feature seam when active |
+| Founder / light ownership | Optional: zero-wage founders, yearly profit share, buyout to salaried staff |
+| Share market | Scaffolding only until `boardShare` (or successor) is active; historical plans are reintroduction references, not current runtime |
 
-- They are generated by bulk/NPC buyers through `forwardContractService.ts`, not by converting customer orders.
-- They can target bottled wine, grapes, `must_ready`, or `must_fermenting` inventory.
-- Quantity and price scale with company value, prestige, buyer market profile, season/economy context, and relationship effects.
-- Runtime supports generation, acceptance, rejection, delivery, expiration, and default handling.
-- Finance uses forward-advance, final-settlement, and default-penalty transaction categories.
-- Contracts tab displays the offers with unit labeling for kg or bottles.
-- Admin/Test Lab scenarios can generate bottled pre-sale and grape forward contracts.
+### Staff and activities
 
-Remaining market work:
+| System | Intended behavior |
+|---|---|
+| Staff | Recruitment, teams, specializations, wages, assignment, search |
+| Activities | Lifecycle via activity managers; `calculateTotalWork()` and domain work calculators |
+| Research as activity | Shared work/cost pattern for research projects |
+| Skills | Modify work completion through established calculator flow |
 
-- Bottle-market saturation and broad dynamic consumer demand are not implemented.
-- Forward/pre-sale contracts are active; remaining work here is balancing, UX refinement, and any deeper lifecycle rules, not basic implementation.
+### Research (pattern)
 
-### Finance, Loans, Founder Economy, And Board/Share Status
+| Area | Notes |
+|---|---|
+| Catalog | Categories, complexity, work profiles, prerequisites, prestige/company-value/loyalty/achievement gates |
+| UI | Active effects, footprint, catalog tabs; locked/available/completed states |
+| Starting conditions | Regional pre-unlocks where applicable |
+| Enforcement | Document unlock targets in `CONTEXT.md` (`unlocks`, `permanentEffects` authoritative over flavor `benefits` text) |
+| Permanent effects | Aggregated in a dedicated service; applied in named domain services only |
 
-- Transactions, income statements, balance sheets, cash flow, asset valuation, and finance UI are implemented.
-- Loan/lender gameplay is active through the `loanLender` feature seam.
-- Founder economy is implemented as a light ownership slice:
-  - starting staff can be founders through `isFounder`;
-  - founders have zero wages;
-  - founders receive yearly Founder Return distributions when yearly net profit is positive;
-  - founders can be bought out and converted to salaried staff;
-  - `FounderPanel.tsx` shows active founders and buyout controls.
-- Full public-company/share-market runtime is not active in mainline. The codebase currently keeps board/share database scaffolding, share constants, and a no-op `boardShare` feature shell.
-- `docs/superpowers/plans/PublicCompanyPlan.md` and `docs/superpowers/plans/PublicCompanyImplementation.md` are preserved as historical implemented-feature and possible reintroduction references. They should not be read as active current runtime behavior.
+Deferred (example): equipment gameplay, advanced technique tracks, feature-unlock projects without enforcement.
 
-### Staff And Activities
+### Prestige, achievements, highscores
 
-- Staff recruitment, team management, specializations, wage calculation, assignments, and staff search are implemented.
-- Activity lifecycle and work calculators cover vineyard, winery, staff, finance, loan, and research flows.
-- Research starts as activity work and uses the shared work/cost calculation pattern.
-- Staff skills contribute to work completion through the established activity manager and work calculator flow.
+| System | Intended behavior |
+|---|---|
+| Prestige ledger | Source of truth; permanent vs decaying rows; weekly decay |
+| Writers | Sales, contracts, features, research, finance penalties, admin tools — via single insert/upsert API |
+| Achievements | Thresholds on persisted log scores, not mutable live state fallbacks |
+| Highscores | Historical persisted outputs |
 
-### Research
+## Domain Systems — To Document When Implemented
 
-- Research catalog, project categories, complexity, work profiles, prerequisites, prestige gates, company-value gates, buyer-loyalty gates, achievement gates, costs, and completion persistence are implemented.
-- Research UI has Active Research Effects, Research Footprint, and Catalog tabs.
-- Catalog supports in-progress, locked, available, completed, admin-bypass, and Hide completed states.
-- Starting conditions can apply regional `startingResearch` pre-unlocks.
-- Implemented unlock enforcement includes:
-  - grape planting unlocks;
-  - fermentation technology unlocks;
-  - staff cap;
-  - vineyard size, total hectare, and vineyard count caps;
-  - contract channel access;
-  - grape buyer market unlocks and scaling effects.
-- Permanent research effects are aggregated through `researchPermanentEffectsService.ts`; the currently shipped gameplay effect is `vineyard_health_decay_multiplier`.
+Use this checklist when gameplay lands. Copy rows from design into concrete file paths in `docs/PROJECT_INFO.md`.
 
-Research limitations:
+| Domain | Status | Notes |
+|---|---|---|
+| Production sites / facilities | TBD | |
+| Processing / quality / scoring | TBD | See `VariableRelationshipMap.md` |
+| Sales & contracts | TBD | |
+| Commodity markets | TBD | |
+| Overlays (weather, economy) | TBD | |
+| Research unlocks | TBD | |
+| Domain reference UI | TBD | |
 
-- Equipment gameplay is not implemented.
-- Dedicated vineyard-technique projects/hooks are still future work.
-- `wine_feature` project typing exists, but there is no full project/enforcement track yet.
-- Some `benefits` copy remains aspirational; use `unlocks` and `permanentEffects` as authoritative gameplay effects.
-- `tests/user/researchPanelVisibility.test.ts` has known failing visibility expectations from the research UI backlog.
+## Main File Map (workflow template)
 
-### Prestige, Achievements, And Highscores
-
-- `prestige_events` is the source ledger for company and vineyard prestige.
-- Permanent rows and decaying rows are both implemented.
-- Weekly prestige decay is active.
-- Company value, vineyard factors, cellar collection, sales, contracts, features, achievements, research, loans/bookkeeping, and admin tools can write prestige rows.
-- Prestige balance has been tuned for achievement tiers, feature sale severity, vineyard sale caps, contract feature prestige, and loan penalties.
-- Achievements include wine score, company progression, vineyard progression, and bulk grape market milestones.
-- Highscores use persisted historical outputs rather than recalculating from mutable current state.
-
-### Admin And Testing Tools
-
-- Admin Dashboard is dev-only and loopback-gated.
-- Admin Test Systems separate the shared automated Vitest suite from Gameflow Lab fixture/scenario tools.
-- Gameflow Lab creates inspectable active-company fixture states and supports durable cleanup through `testlab_...` run ids.
-
-## Current Not-Yet-Implemented Or Partial Areas
-
-- Active full public-company/share-market runtime.
-- Storage vessel/container management.
-- Equipment gameplay and upgrades beyond placeholders/design.
-- Dedicated advanced farming methods such as organic/biodynamic systems.
-- Bottle-market saturation and broad consumer demand simulation.
-- Customer taste preference matching.
-- Severe weather events, mitigation actions, weather achievements, and weather research upgrades.
-- Descriptor-level taste scoring.
-- Full `wine_feature` research project/enforcement track.
-
-## Main File Map
+Paths are **targets** from the shared repo layout; create or rename as Proto Production domains are defined.
 
 | Area | Main locations |
 |---|---|
-| App routing/layout | `src/App.tsx`, `src/components/layout/` |
+| App routing / layout | `src/App.tsx`, `src/components/layout/` |
 | Shared hooks | `src/hooks/` |
 | Shared utilities | `src/lib/utils/` |
 | Game constants | `src/lib/constants/` |
 | Database layer | `src/lib/database/` |
-| Core state/tick | `src/lib/services/core/` |
-| Activity lifecycle/work | `src/lib/services/activity/`, `src/components/ui/activities/` |
-| Vineyard | `src/lib/services/vineyard/`, `src/components/pages/Vineyard.tsx`, vineyard modals |
-| Weather | `src/lib/services/finance/weatherService.ts`, `src/lib/services/vineyard/weatherImpactService.ts`, `src/lib/services/vineyard/weatherCenterService.ts`, `src/components/pages/WeatherCenter.tsx` |
-| Wine production | `src/lib/services/wine/`, `src/components/pages/Winery.tsx`, wine modals |
-| Wine scoring/taste | `src/lib/wineStructure/`, `src/lib/services/wine/taste/`, `src/lib/services/wine/winescore/`, wine score UI components |
-| Sales/orders/contracts | `src/lib/services/sales/`, `src/components/pages/Sales.tsx`, `src/components/pages/sales/` |
-| Grape markets | `sellGrapesService.ts`, `buyGrapeMarketService.ts`, grape buyer/supplier market and loyalty services, market modals |
-| Forward pre-sales | `src/lib/services/sales/forwardContractService.ts`, `src/lib/database/sales/forwardContractDB.ts`, `src/components/pages/sales/ContractsTab.tsx` |
-| Finance/founder | `src/lib/services/finance/`, `src/components/finance/`, `src/lib/services/user/staffService.ts` |
-| Loans/lenders | `src/lib/features/loanLender/` |
-| Board/share seam | `src/lib/features/boardShare/`, share and board database scaffolding |
-| Research | `src/lib/constants/researchConstants.ts`, `src/lib/services/research/`, `src/lib/features/researchUpgrade/`, `src/components/pages/Research.tsx` |
-| Prestige | `src/lib/services/prestige/`, `src/lib/database/customers/prestigeEventsDB.ts` |
-| Achievements/highscores | `src/lib/services/user/achievementService.ts`, `highscoreService.ts`, achievement/highscore DB modules and pages |
-| Admin test lab | `src/components/pages/admin/TestLabPage.tsx`, `src/lib/services/admin/testLab/`, `server/test-runner.ts` |
+| Core state / tick | `src/lib/services/core/` |
+| Activity lifecycle / work | `src/lib/services/activity/`, `src/components/ui/activities/` |
+| Domain services | `src/lib/services/<domain>/` |
+| Domain pages | `src/components/pages/` |
+| Sales UI | `src/lib/services/sales/`, `src/components/pages/sales/` |
+| Finance / staff | `src/lib/services/finance/`, `src/lib/services/user/`, `src/components/finance/` |
+| Feature seams | `src/lib/features/` (e.g. `loanLender/`, `researchUpgrade/`, `boardShare/`) |
+| Research | `src/lib/constants/researchConstants.ts`, `src/lib/services/research/` |
+| Prestige | `src/lib/services/prestige/`, prestige DB modules |
+| Achievements / highscores | `src/lib/services/user/`, related DB and pages |
+| Admin / test lab | `src/components/pages/admin/`, `src/lib/services/admin/testLab/`, `server/test-runner.ts` |
 | Tests | `tests/` |
+
+## Related docs
+
+| Need | Document |
+|---|---|
+| Domain glossary | `docs/CONTEXT.md` |
+| Variable relationships | `docs/VariableRelationshipMap.md` |
+| Module ownership | `docs/PROJECT_INFO.md` |
+| Session handoff prompt | `docs/AIdocs/AIpromt_newpromt.md` |

@@ -28,7 +28,7 @@ Current stack: React 19, TypeScript 5, Vite 7, Tailwind 3, ShadCN/Radix UI, Supa
 - Keep pages/components presentation-focused.
 - Prefer existing barrel imports from `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
 - Use shared types from `src/lib/types/` and `src/components/UItypes.ts`.
-- Use domain language from `CONTEXT.md`.
+- Use domain language from `docs/CONTEXT.md` once defined.
 - Preserve company-scoped persistence and the existing global/topic update flow.
 - Do not add legacy data-shape compatibility unless the user explicitly asks.
 
@@ -63,7 +63,7 @@ Current stack: React 19, TypeScript 5, Vite 7, Tailwind 3, ShadCN/Radix UI, Supa
 
 1. Add constants for tunable values before adding new magic numbers.
 2. Keep multi-step calculations in focused service modules.
-3. Use domain naming from `CONTEXT.md`.
+3. Use domain naming from `docs/CONTEXT.md` once defined.
 4. Preserve company-scoped behavior for persisted state.
 5. Keep utility helpers small and shared only when there is real reuse.
 
@@ -75,7 +75,7 @@ Current stack: React 19, TypeScript 5, Vite 7, Tailwind 3, ShadCN/Radix UI, Supa
 | React performance and render behavior | `../react-best-practices/SKILL.md` |
 | ShadCN component composition | `../shadcn-best-practices/SKILL.md` |
 | Supabase/Postgres work | `../supabase-best-practices/SKILL.md` |
-| Stable domain terms | `../../CONTEXT.md` |
+| Stable domain terms | `../../../docs/CONTEXT.md` |
 | Current implementation status | `../../docs/AIdocs/AIDescriptions_coregame.md` |
 
 ## Verification

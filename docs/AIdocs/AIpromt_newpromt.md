@@ -1,73 +1,64 @@
 # AI Prompt: Starting A New Development Session
 
-We have a comprehensive winery management game built with React/Vite/TypeScript + ShadCN, connected to Supabase. Use this as the short context handoff when opening a new AI coding session for this repo.
+Use this as a short context handoff when opening a new AI coding session for this repo.
 
 ## Project Summary
 
-This is a single-player, turn-based winery management game. The player manages vineyards, harvests grapes, produces wine, sells bottles and contracts, manages staff and finance, builds prestige, and competes through achievements/highscores.
+Turn-based single-player **resource production simulation** (working title: Proto Production). Stack: React, Vite, TypeScript, Tailwind, ShadCN UI, Supabase.
 
-Core simulation logic should live in services; React components should stay focused on presentation and interaction.
+The player manages production, processing, sales, staff, finance, prestige, and progression. Core simulation logic belongs in services; React components stay presentation-focused.
+
+Domain mechanics are **not fully specified yet** — read `docs/CONTEXT.md` before inventing game terms.
 
 ## First Files To Read
 
-1. `readme.md` - codebase entry point and documentation map.
-2. `CONTEXT.md` - stable domain language, variables, constants, and naming policy.
-3. `docs/AIdocs/AIDescriptions_coregame.md` - current implemented systems.
-4. `docs/PROJECT_INFO.md` - file structure and major module locations.
-5. `docs/WineSystem_VariableRelationshipMap.md` - wine variable relationships and game-flow diagrams.
+1. `readme.md` — entry point and documentation map.
+2. `docs/CONTEXT.md` — domain language (placeholder until design lands).
+3. `docs/AIdocs/AIDescriptions_coregame.md` — stack, shared systems, UI/infra patterns.
+4. `docs/PROJECT_INFO.md` — file structure and module locations.
+5. `docs/VariableRelationshipMap.md` — how variables should relate once defined.
 
-For taste, structure, or contracts work, also read:
+For architecture or large features, also check `docs/superpowers/specs/` and `docs/superpowers/plans/` — treat as non-authoritative unless code or `AIDescriptions_coregame.md` confirms.
 
-- `docs/superpowers/plans/TasteSystem_WineFolly_Research.md`
-- `docs/superpowers/completed/2026-05-20-taste-quality-index-design.md`
-- `docs/superpowers/completed/2026-05-20-taste-quality-index.md`
-- `docs/superpowers/completed/2026-05-20-contract-taste-site-ui.md`
+Repo router skill (if using local skills): `skills/webgamedev-gram/SKILL.md`.
 
-## Current System Snapshot
+## Current System Snapshot (bootstrap)
 
-- **Core architecture:** React/Vite/TypeScript frontend, Supabase persistence, company-scoped data, week-based game tick, global update hooks.
-- **Vineyard:** land buying, planting, clearing/health, overgrowth, ripeness, vine yield, harvest creation.
-- **Wine production:** grapes -> must -> wine -> bottled pipeline, compact wine anchors, six structure channels, `structureIndex`, 14-family taste profile, `tasteQualityIndex`, and combined `wineScore`.
-- **Sales:** regional customers, order generation, multi-factor pricing, contracts with taste/structure/site/grape/vintage/characteristic requirements, sell-side grape buyers, buy-side grape suppliers, loyalty, and economy/weather market pressure.
-- **Weather:** current weather, forecast pattern/confidence, Weather Center, vineyard health/ripeness impact, and grape-market volatility.
-- **Finance:** transactions, financial reports, loans through the `loanLender` feature seam, founder profit-share/buyout UI, and asset valuation.
-- **Board/share status:** public-company/share-market docs are historical implemented-feature and reintroduction references; current mainline only has board/share scaffolding and a no-op `boardShare` feature shell.
-- **Staff/activity:** staff management, founders, teams, recruitment, wages, assignment, work calculators, activity progression.
-- **Research:** active research page with effects/footprint/catalog tabs, enforced gates, starting research, grape/fermentation/staff/vineyard/contract/grape-buyer unlocks, and permanent vineyard-health effect aggregation.
-- **Player interface:** company switching, profile, Winepedia, achievements, highscores, settings, notifications, admin tools.
-- **Prestige:** company and vineyard prestige events, decay, customer relationship effects.
+- **Core architecture:** React/Vite/TypeScript, Supabase persistence, company-scoped data, week-based game tick pattern, global update hooks.
+- **Shared UI:** layout, activity panel, notifications, page routing, finance/sales sub-surfaces, reference/wiki pattern, admin test tools (dev-only).
+- **Cross-cutting:** transactions and reports, loans via feature seam, optional founder/ownership slice, research catalog pattern, prestige event ledger pattern, achievements/highscores on persisted history.
+- **Domain gameplay:** TBD — do not assume prior winery modules (`vineyard/`, `wine/`, grape markets) exist until `PROJECT_INFO.md` and code show them.
 
-Known current test caveat: the full suite has two active failing visibility expectations in `tests/user/researchPanelVisibility.test.ts`; treat that as research UI backlog, not as a general test-runner failure.
+Keep detailed status in `AIDescriptions_coregame.md` and path ownership in `PROJECT_INFO.md`; do not expand this prompt into a second README.
 
-Keep detailed status updates in `docs/AIdocs/AIDescriptions_coregame.md` and file/module updates in `docs/PROJECT_INFO.md`; do not expand this prompt into a second README.
-
-## Key File Locations
+## Key File Locations (workflow)
 
 | Area | Path |
 |---|---|
 | Core types | `src/lib/types/types.ts` |
 | UI types | `src/components/UItypes.ts` |
 | Core services | `src/lib/services/core/` |
-| Vineyard services | `src/lib/services/vineyard/` |
-| Wine services | `src/lib/services/wine/` |
-| Structure index | `src/lib/wineStructure/` |
+| Domain services | `src/lib/services/<domain>/` |
 | Sales services | `src/lib/services/sales/` |
-| Finance services | `src/lib/services/finance/`, `src/lib/services/user/` |
+| Finance / user | `src/lib/services/finance/`, `src/lib/services/user/` |
 | Activity services | `src/lib/services/activity/` |
 | Database layer | `src/lib/database/` |
 | Game constants | `src/lib/constants/` |
-| Wine feature constants | `src/lib/constants/wineFeatures/` |
-| Taste constants | `src/lib/constants/taste/` |
+| Pages | `src/components/pages/` |
+| Shared UI | `src/components/ui/` |
+| Hooks | `src/hooks/` |
+| Tests | `tests/` |
+| Migrations | `migrations/` |
 
 ## Development Rules
 
-- Keep business logic in `src/lib/services/`.
-- Keep Supabase reads/writes in `src/lib/database/`.
-- Keep React components focused on UI state, display, and user interaction.
-- Prefer existing barrel exports from `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
-- Use shared types from `src/lib/types/` and `src/components/UItypes.ts`.
-- Follow current terminology: `structureIndex`, `tasteQualityIndex`, `wineScore`, compact `WineAnchorValues`.
-- Database parsing only accepts current compact wine anchor keys; do not add old data-shape support unless explicitly requested.
+- Business logic in `src/lib/services/`.
+- Supabase reads/writes in `src/lib/database/`.
+- React components: UI state, display, interaction only.
+- Prefer barrel exports: `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, `@/lib/constants`.
+- Shared types: `src/lib/types/`, `src/components/UItypes.ts`.
+- Terminology from `docs/CONTEXT.md` once defined; no legacy data-shape support unless explicitly requested.
+- Git: user commits by default; use MCP GitHub tools instead of terminal `git log` / `git show` when history is needed.
 
 ## Useful Commands
 
@@ -76,3 +67,5 @@ npm test
 npm run build
 git diff --check
 ```
+
+Do not run `npm run dev` unless asked (user may already have a dev server).

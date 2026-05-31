@@ -1,165 +1,110 @@
-# Skiresort Tycoon - AI Agent Instructions
+# AI Agent Instructions
 
-This is a ski resort tycoon simulation game built with React, TypeScript, Vite, and Zustand.
-Three-layer architecture: **Engine** (`src/engine/`) → **State** (`src/stores/`) → **UI** (`src/ui/`).
+Turn-based resource production simulation. Stack: **React, TypeScript, Vite, Tailwind, ShadCN UI, Supabase**.
 
-For full system design, domain model, and implementation status see [DESIGN.md](../DESIGN.md).
+Layering: **Services** (`src/lib/services/`) → **Database** (`src/lib/database/`) → **UI** (`src/components/`).  
+Full orientation: `readme.md`, `docs/AIdocs/AIDescriptions_coregame.md`, `docs/PROJECT_INFO.md`.
 
-## AI Context
+## Session start
 
-Always read README.md. Read DESIGN.md for full system details.
+Read `readme.md` and `docs/AIdocs/AIpromt_newpromt.md` before non-trivial work.
 
-## AI check message
-Start all responses with the following message:
+Optional acknowledgment (when using Copilot-style flows):
 
-[AI Agent Instructions] - Have read the copilot-instructions.md.
-
----
-
-## Fixed Timestep Game Loop
-
-- 1 game day = ~2 seconds real time (`tickRate: 1000ms`, fixed speed — not user-adjustable).
-- Fixed timestep accumulator pattern prevents time-dependent drift.
-- `GameEngine.tick()` order — **critical when adding new systems**:
-  1. Advance time (date/season)
-  2. Prestige decay
-  3. Achievement check (every 7 days)
-  4. Advance weather / snow condition
-  5. Degrade facilities
-  6. Recalculate ratings
-  7. Recalculate demand
-  8. Apply network flow
-  9. Process daily expenses
-  10. Process income
-  11. Process loans / refresh credit rating (`LoanCreditSystem`)
-  12. Increment game tick counter
-
----
-
-## Type System Conventions
-
-- Canonical import surface: `src/types/index.ts`. Always import from `../types`, not individual type files.
-- `domain.ts` — entities/unions/constants; `sim.ts` — simulation contracts; `state.ts` — store state; `prestige.ts` — prestige event types.
-
-**Discriminated unions for facilities:**
-```typescript
-type Facility = SlopeFacility | LiftFacility | AccommodationFacility | ...
-// Pattern match on facility.type for type-safe access
+```text
+[AI Agent Instructions] — read copilot-instructions.md and readme.md.
 ```
 
-**Customer segments** (literal type, not enum): `'families' | 'young_people' | 'enthusiasts' | 'seniors'`
+## AI check message
 
-**Seasons**: `'winter' | 'spring' | 'summer' | 'fall'` — 90-day cycles.
+Start user-facing work with:
 
----
+```text
+AI check: <1-5> - <brief reason>
+```
 
-## State Management Patterns
+## Game tick order (when `gameTick.ts` exists)
 
-- Multiple focused stores, not one monolithic store.
-- Systems call stores directly: `useResortStore.getState()`
-- Components subscribe via hooks: `useResortStore(state => state.resort)`
-- Store actions return void; systems handle complex logic.
-- Never store derived values — calculate on-the-fly or in systems.
-- Never store functions in Zustand (serialization issues).
+When adding systems to the weekly tick, keep ordering explicit and document new steps in `AIDescriptions_coregame.md`. Typical pattern from prior stack:
 
-**All stores use `persist` middleware** — localStorage keys are `skiclicker-{storename}`.
+1. Advance time (week / season / year)
+2. Prestige decay (if ledger-based)
+3. Achievement checks (if scheduled on tick)
+4. economy) and production impacts
+5. 
+8. Seasonal or yearly finance hooks
+9. Notifications and global UI refresh triggers
 
-**Store quick-reference:**
+Adjust order to match actual dependencies — do not hide cross-system side effects inside unrelated services.
 
-| Store | Persists | Notable exclusions |
-|---|---|---|
-| `gameStore` | pass prices | `isRunning` (always false on load), `currentTick` |
-| `timeStore` | everything | `currentDate` revived from ISO string → `Date` |
-| `financeStore` | balance, transactions (last 500), loans, credit | `dailyIncome`, `dailyExpenses`, `loanOffers` |
-| `demandStore` | stocks, reputation, modifier, pass split | `currentVisitors`, `demandBySegment` |
-| `resortStore` | full resort entity | — |
-| `weekPassStore` | `activeWeekPassHolders` array | — |
-| `seasonPassStore` | holder count, season start day | — |
-| `serviceStore` | services, activeServices | — |
-| `weatherStore` | weather, snow condition | — |
-| `prestigeStore` | all prestige events | — |
+## Type and module conventions
 
----
+- Shared types: `src/lib/types/types.ts`, `src/components/UItypes.ts`
+- Prefer barrel imports from `@/lib/services`, `@/lib/constants`, `@/lib/database`, `@/components/ui`, `@/hooks`
+- Tunable gameplay values in `src/lib/constants/`, not magic numbers in UI
+- Company-scoped persistence for all gameplay tables
 
-## Game Balance Constants
+## State and updates
 
-All tunable parameters live in `src/constants/gameConstants.ts` and `src/engine/services/constants/index.ts`.
-Key sets: `CUSTOMER_CONSTANTS`, `WORKER_CONSTANTS`, `UTILITY_CONSTANTS`, `DEGRADATION_CONSTANTS`, `MAINTENANCE_CONSTANTS`.
-**Always extract magic numbers to named constants with a comment on design intent.**
+- `useGameState()` / `useGameStateWithData()` for loaded company state
+- `useGameUpdates()` for topic-scoped or global refresh after service mutations
+- Services trigger updates after writes; components do not recalculate domain state locally
 
----
+## Critical hooks (patterns)
 
-## Critical System Hooks
+| Concern | Pattern |
+|---|---|
+| Work / activities | `calculateTotalWork()`, domain activity managers |
+| Loading UX | `useLoadingState()` |
+| Prestige | Ledger writes through prestige service; derive display totals |
+| Finance | Transaction categories; reports from `financeService` |
+| Research | Gates from `unlocks` / `permanentEffects`, not flavor text alone |
 
-**`DemandSystem.calculateDemand()`** — reads ratings, prices, season, service multipliers → writes `demandStore`.
+## Developer workflows
 
-**`FinanceSystem` daily cycle:**
-1. `processDailyExpenses()` — maintenance, wages, services, utilities
-2. `processIncome()` — new pass sales, accommodation, restaurants, rentals
-3. `degradeFacilities()` — time/usage-based condition decay
+**Adding a domain service:**
 
-**`LoanCreditSystem.processDaily()`** — loan payments, defaults, credit rating refresh.
+1. Add types in `src/lib/types/` if shape is shared
+2. Add constants in `src/lib/constants/<domain>/`
+3. Implement logic in `src/lib/services/<domain>/`
+4. Add DB module in `src/lib/database/` if persisted
+5. Wire page/modal in `src/components/pages/` or `src/components/ui/`
+6. Update `docs/CONTEXT.md` and `docs/VariableRelationshipMap.md` when variables are introduced
 
-**`RatingSystem.calculateRatings()`** — sub-ratings (slopes, lifts, facilities, safety, kids, snowparks, off-piste), segment-specific weights, service multipliers applied.
+**Adding a page:**
 
----
+- Orchestration only; call services for data and mutations
+- Reuse layout, hooks, and shadcn primitives from `src/components/ui/`
 
-## Developer Workflows
+**Schema change:**
 
-**Adding a new facility type:**
-1. Add discriminated union variant to `src/types/domain.ts`
-2. Add factory method in `src/engine/facilities/FacilityFactory.ts`
-3. Handle in `DemandSystem`, `RatingSystem`, `FinanceSystem`
-4. Update `src/ui/pages/BuildPage.tsx` and `src/ui/pages/FacilityPage.tsx`
-5. Add constants in `gameConstants.ts`
+1. Dev Supabase first
+2. SQL under `migrations/`
+3. Update DB mapper and types
 
-**Adding a new system:**
-- Static class in the relevant `engine/` folder
-- Access stores via `getState()`
-- Register call in `GameEngine.tick()` in the correct position
-- Systems are stateless — all state lives in Zustand stores
+## Testing
 
-**Finance/Loans UI:** Keep `FinancePage` orchestration-only; push complex logic into `src/ui/hooks/`.
+- `npm test` — Vitest under `tests/`
+- Admin automated runner: dev-only `/api/test-run`
+- Gameflow Lab: active-company fixtures, `testlab_...` cleanup ids
 
-**Barrel imports — always prefer when available:**
-- `src/types`, `src/ui/pages`, `src/ui/components`, `src/ui/hooks`, `src/ui/shared`
-- `src/engine/network`, `src/engine/terrain`, `src/engine/facilities/constants`, `src/engine/services/constants`
+## Common pitfalls
 
----
+- Do not call Supabase from components
+- Do not invent prestige or score values in UI without service derivation
+- Do not add legacy field aliases unless user explicitly requests compatibility
+- Do not assume anything excist in  `src/lib/services/ `  — check PROJECT_INFO.md` and code
 
-## localStorage — Fresh-Game Detection
-
-`App.tsx` checks `resort.terrainAreas.length === 0` on mount:
-- Empty → fresh game: call `initialize()`, `initializeTerrain()`, `WeatherSystem.initialize()`.
-- Populated → restored: skip initialization entirely.
-- `AdminPage` "Reset Game" clears all 10 `skiclicker-*` keys and reloads.
-
----
-
-## Common Pitfalls
-
-- **Don't call systems from components.** `GameEngine` orchestrates; components only read state and dispatch store actions.
-- **Don't mutate facilities directly.** Use store actions that produce new arrays/objects (Zustand requires immutability).
-- **Don't store functions in Zustand.** Causes serialization and re-render issues.
-- **Week pass holders** use `weekPassStore.activeWeekPassHolders` array (individual arrival/departure days), not a plain count.
-- **Facility node links** — keep `startNodeId/endNodeId/baseNodeId/peakNodeId` coherent or network flow/routing breaks.
-- **Date revival** — `timeStore.currentDate` and `financeStore.transactions[].timestamp` are stored as ISO strings and revived to `Date` in `onRehydrateStorage`.
-
----
-
-## Key Files
+## Key files (template)
 
 | File | Purpose |
 |---|---|
-| `src/engine/core/GameEngine.ts` | Game loop and tick orchestration |
-| `src/engine/economy/DemandSystem.ts` | Customer attraction and pass purchase logic |
-| `src/engine/economy/FinanceSystem.ts` | Transaction ledger, income/expenses |
-| `src/engine/economy/LoanCreditSystem.ts` | Loan payments and credit rating |
-| `src/engine/prestige/prestigeService.ts` | Prestige event creation |
-| `src/engine/prestige/achievementService.ts` | Achievement detection and awards |
-| `src/stores/resortStore.ts` | Resort entity and facility management |
-| `src/types/domain.ts` | Core domain/facility types |
-| `src/types/prestige.ts` | Prestige event types |
-| `src/types/index.ts` | Canonical type export surface |
-| `src/constants/gameConstants.ts` | Balance tuning |
-| `DESIGN.md` | Full design, systems, and implementation reference |
+| `src/App.tsx` | Routing and shell |
+| `src/lib/services/core/gameTick.ts` | Weekly simulation tick |
+| `src/lib/services/core/` | Game state, starting conditions |
+| `src/lib/database/core/` | Company, game state, transactions |
+| `src/lib/services/prestige/` | Prestige ledger |
+| `src/lib/services/finance/` | Economy and finance |
+| `src/components/layout/Header.tsx` | Main chrome |
+| `docs/CONTEXT.md` | Domain glossary |
+| `docs/VariableRelationshipMap.md` | Variable dependency template |
