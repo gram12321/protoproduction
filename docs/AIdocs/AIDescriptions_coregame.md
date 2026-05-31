@@ -1,20 +1,40 @@
 # Core Game Mechanics — Implementation Orientation
 
-Last updated: 2026-05-30  
+Last updated: 2026-05-31
 Status: Bootstrap — domain gameplay systems are not defined in this repo yet. This file describes **stack, architecture, and shared infrastructure** to preserve from the prior project workflow.
 
 Use this to see what patterns exist, where shared code should live, and what is **not** authoritative until `docs/CONTEXT.md` and code confirm it.
 
+Update note: the current implemented minimum loop status is tracked in this file as of 2026-05-31.
+
 Design docs under `docs/superpowers/plans/` and `docs/superpowers/specs/` are history from prior work unless this file, `docs/CONTEXT.md`, `readme.md`, or the code says otherwise.
+
+## Status Update (2026-05-31)
+
+This update supersedes the earlier bootstrap note:
+
+- The minimum runtime loop is implemented and test-covered.
+- Existing planning sections below remain intentional and should be treated as future or deferred scope unless code confirms implementation.
 
 ## Current Architecture
 
 - React, Vite, TypeScript, Tailwind, ShadCN UI, and Supabase single-player management game (resource production simulation — details TBD).
-- Simulation advances manually by week through `processGameTick()` in `src/lib/services/core/gameTick.ts` (when implemented).
+- Simulation advances manually through `processGameTick()` in `src/lib/services/core/gametick.ts`.
 - Gameplay rules live in `src/lib/services/`; Supabase access lives in `src/lib/database/`; React components handle display, UI state, and interaction.
 - **Company-scoped play** is the core persistence model. Database calls follow active-company / current-company flow, not global assumptions.
 - Feature seams under `src/lib/features/` (e.g. `loanLender`, `researchUpgrade`) isolate optional subsystems.
 - Domain vocabulary belongs in `docs/CONTEXT.md`. Do not assume winery-specific terms (`structureIndex`, `wineScore`, etc.) until defined there.
+
+## Currently Implemented Baseline
+
+- `GameLoopState` includes `tick`, `money`, `inventory`, and `buildings`.
+- `src/lib/constants/gamestate.ts` defines `STARTING_BALANCE_EUR = 1000` and initial state.
+- `src/lib/constants/recipeConst.ts` defines one recipe: `produce-grain` (1 tick -> 1 grain).
+- `src/lib/services/core/gameinit.ts` creates fresh initial state copies.
+- `src/lib/services/core/gametick.ts` runs building recipes and increments tick.
+- `src/lib/services/inventory.ts` mutates resource totals via `addResource`.
+- `src/components/pages/GameShellPage.tsx` exposes a manual `Run 1 tick` action and state readout.
+- `tests/App.test.tsx` verifies tick progression, grain accumulation, and unchanged starting money.
 
 ## Database And Persistence
 

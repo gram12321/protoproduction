@@ -6,6 +6,15 @@ fill in domain names and variables as design lands in [CONTEXT.md](CONTEXT.md). 
 
 Stable terminology, constants, parameters, and variable descriptions live in [CONTEXT.md](CONTEXT.md). This document describes **how** variables should relate to each other through gameflow once those terms exist.
 
+## Current implemented baseline (2026-05-31)
+
+The runtime currently has one concrete dependency chain:
+
+- `GameLoopState.tick` increments by `+1` each manual tick.
+- `Building(recipeType="produce-grain")` resolves to `ProductionRecipe`.
+- `ProductionRecipe.output` adds `1 grain` to `Inventory.grain`.
+- `GameLoopState.money` starts at `1000` and does not change in the baseline tick flow.
+
 Prestige or progression event sources may be inventoried separately when that subsystem is implemented (e.g. under `docs/superpowers/completed/`).
 
 ## 1) Purpose

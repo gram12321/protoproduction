@@ -28,6 +28,13 @@ Historical plans under `docs/superpowers/plans/` from prior games are **not** cu
 - Update research/spec docs without deleting useful future ideas; mark them implemented, superseded, or deferred.
 - Remove stale names instead of documenting compatibility branches that no longer exist.
 
+## Implementation Status Style
+
+- Preserve planning and future sections unless they are explicitly obsolete.
+- Add a clear "currently implemented" snapshot near the top of status docs.
+- Mark planned sections as `planned`, `deferred`, or `not implemented yet` instead of deleting them.
+- Keep file paths and exported names aligned with the codebase.
+
 ## Verification
 
 Before finishing a documentation pass:

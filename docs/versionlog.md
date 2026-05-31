@@ -69,6 +69,89 @@ Use this structure for every new entry:
 
 ---
 
+## Version 0.0021 - First Game Loop (production + inventory)
+
+**Date:** 2026-05-31 | **Commit(s):** 002369e | **Stats:** 14 files changed, 167 insertions(+), 53 deletions(-)
+
+### Summary
+
+- Replaced static bootstrap UI with first interactive game tick loop.
+- Added typed state, recipe, building, and inventory model for minimal production flow.
+- Wired page interaction to service-layer tick processing and updated test coverage.
+
+### Changes
+
+- `src/components/pages/GameShellPage.tsx` (+23/-44) - switched from static stack summary to live simulation panel and `Run 1 tick` action.
+- **NEW FILE:** `src/lib/constants/gamestate.ts` (18 lines) - seed game loop state.
+- **NEW FILE:** `src/lib/constants/recipeConst.ts` (18 lines) - recipe constants and lookup.
+- **NEW FILE:** `src/lib/services/core/gameinit.ts` (14 lines) - initial state factory.
+- **NEW FILE:** `src/lib/services/core/gametick.ts` (22 lines) - production tick processor.
+- **NEW FILE:** `src/lib/services/inventory.ts` (12 lines) - inventory resource accumulator.
+- **NEW FILE:** `src/lib/types/buildingTypes.ts`, `src/lib/types/gamestateTypes.ts`, `src/lib/types/inventoryTypes.ts`, `src/lib/types/recipeTypes.ts` - first typed domain loop primitives.
+- `tests/App.test.tsx` (+13/-6) - asserts tick increment and grain production behavior.
+
+### Notes
+
+- Scope stays intentionally minimal: one building (`farm`), one recipe (`produce-grain`), one resource (`grain`).
+- Service separation kept: page orchestrates; domain logic sits in `src/lib/services/`.
+
+---
+
+## Version 0.002 - React+Vite+Tailwind+ShadCN Baseline
+
+**Date:** 2026-05-31 | **Commit(s):** f25813d | **Stats:** 29 files changed, 3,821 insertions(+), 2 deletions(-)
+
+### Summary
+
+- Introduced runnable frontend stack with Vite, React 19, TypeScript, Tailwind, and ShadCN setup.
+- Added initial UI shell, alias wiring, and first shared button primitive.
+- Added Vitest + Testing Library baseline with first render test.
+
+### Changes
+
+- `package.json` (+34/-1), `package-lock.json` (+3391/-1) - app scripts and dependency baseline.
+- **NEW FILE:** `components.json` (20 lines) - ShadCN registry/config.
+- **NEW FILE:** `index.html`, `src/main.tsx`, `src/App.tsx` - Vite entry and React mount.
+- **NEW FILE:** `tailwind.config.ts`, `postcss.config.js`, `src/index.css` - Tailwind theme/config pipeline.
+- **NEW FILE:** `src/components/ui/button.tsx`, `src/components/ui/index.ts` - first reusable UI primitive.
+- **NEW FILE:** `src/components/pages/GameShellPage.tsx`, `src/components/pages/index.ts` - initial bootstrap page.
+- **NEW FILE:** `vite.config.ts`, `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` - build/test/tooling config.
+- **NEW FILE:** `tests/App.test.tsx`, `tests/setup.ts` - testing baseline.
+- `.gitignore` (+1/-0) - ignores `*.tsbuildinfo`.
+
+### Notes
+
+- First commit adding runtime source tree under `src/`.
+- Readme updated with Vite dev-server launch guidance.
+
+---
+
+## Version 0.001a-d - Documentation, Skill Routing, and Repo Bootstrap Prep
+
+**Date:** 2026-05-31 | **Commit(s):** b1a4c09, b433b34, a7e1734, 00922c7, 6385cf0 | **Stats:** 5 commits grouped (docs/rules sync, skill routing updates, bootstrap prep)
+
+### Summary
+
+- Standardized project-facing agent rule documents across `AGENTS.md`, docs, Cursor, and Copilot mirrors.
+- Moved local skills into `.agents/skills/` and aligned routing references to repo-local precedence.
+- Added `small-steps` skill and updated router matrix to pair minimal-change requests with `caveman` style.
+
+### Changes
+
+- `AGENTS.md`, `.github/copilot-instructions.md`, `docs/AIdocs/airules.mdc`, `docs/AIdocs/copilot-instructions.md`, `.cursor/rules/ai-agent-rule.mdc/airulesVS.instructions.md` (+/-) - synchronized canonical rules, path fixes, and plugin-vs-skill precedence.
+- `docs/versionlog.md` (+47/-47) - rewrote guide for Proto Production and corrected 0.000/0.001 commit references.
+- **NEW FILE:** `.cursor/mcp.json.example` (17 lines) - local MCP template without committed secrets.
+- **NEW FILE:** `.gitignore` (11 lines at introduction) - excludes `.cursor/mcp.json`, env files, and build outputs.
+- `.agents/skills/webgamedev-gram/SKILL.md` (+/-) - precedence rules and routing updates.
+- **NEW FILE:** `.agents/skills/toolsskills/small-steps/SKILL.md` (103 lines), `.agents/skills/toolsskills/small-steps/agents/openai.yaml` - minimal-change workflow skill.
+
+### Notes
+
+- Group headline reflects labeled sequence `0.001a` to `0.001d`; grouped body also includes adjacent supporting docs commit `b1a4c09`.
+- This grouped slice is mostly docs/routing hygiene; no persisted gameplay data or migrations changed.
+
+---
+
 ## Version 0.001 - Starting Docs (initial repository push)
 
 **Date:** 2026-05-31 | **Commit(s):** 04eaaa7 | **Stats:** 16 files changed, 771 insertions(+), 1,997 deletions(-)

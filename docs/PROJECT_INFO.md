@@ -1,6 +1,8 @@
 # Project Information
 
-Last updated: 2026-05-30  
+Status update (2026-05-31): Early implementation is live. The repo now has a minimal React/Vite runtime and a baseline game-loop slice, while broader systems in this document remain planned unless marked otherwise.
+
+Last updated: 2026-05-31
 Status: **Bootstrap** — documentation and agent skills only. React/Vite app not installed yet.
 
 Ownership map for **where code will live**. Behavior and shared-system patterns: `docs/AIdocs/AIDescriptions_coregame.md`. Domain terms: `docs/CONTEXT.md`. Variable flow (template): `docs/VariableRelationshipMap.md`.
@@ -19,9 +21,22 @@ Ownership map for **where code will live**. Behavior and shared-system patterns:
 | `readme.md` | Entry point, quick start, doc map |
 | `docs/` | Project docs (`CONTEXT.md`, `PROJECT_INFO.md`, `AIdocs/`, …) |
 | `.agents/skills/` | Local agent skills (`webgamedev-gram`, superpowers, best-practices) |
+| `src/` | App code (components, constants, services, types) |
+| `tests/` | Vitest coverage (currently baseline app loop test) |
+| `package.json` | App scripts and dependencies |
 | `migrations/` | SQL migrations (when schema exists) |
 
-No `src/`, `package.json`, or `tests/` in repo yet.
+The `src/` and `tests/` trees now exist with a minimal core loop baseline.
+
+## Currently implemented slice (minimum loop)
+
+| Area | Implemented files |
+|---|---|
+| Core constants | `src/lib/constants/gamestate.ts`, `src/lib/constants/recipeConst.ts` |
+| Core services | `src/lib/services/core/gameinit.ts`, `src/lib/services/core/gametick.ts`, `src/lib/services/inventory.ts` |
+| Core types | `src/lib/types/gamestateTypes.ts`, `src/lib/types/inventoryTypes.ts`, `src/lib/types/buildingTypes.ts`, `src/lib/types/recipeTypes.ts` |
+| UI shell | `src/components/pages/GameShellPage.tsx` |
+| Verification | `tests/App.test.tsx` |
 
 ## Planned app layout (`src/`)
 

@@ -1,26 +1,41 @@
 # Project Context
 
-Date: 2026-05-30
+Date: 2026-05-31
 
-Stable domain language for this project will live here once core game variables and terminology are defined.
+Canonical domain vocabulary for the currently implemented minimum game loop.
 
-## Status
+## Scope Status
 
-This file is a placeholder. The previous winery-management glossary was removed during project bootstrap. Do not add invented domain terms here until the new game design is documented.
+The runtime currently implements a minimal production simulation:
 
-## Where to look meanwhile
+- one resource (`grain`)
+- one building (`farm`)
+- one recipe (`produce-grain`)
+- one inventory container (`inventory.grain`)
+- one manual tick progression (`processGameTick`)
 
-| Need | Document |
-|---|---|
-| Stack, folder layout, and workflow | `docs/PROJECT_INFO.md` |
-| Short project entry point | `readme.md` |
-| Implementation status | `docs/AIdocs/AIDescriptions_coregame.md` |
-| Variable dependencies (future) | `docs/VariableRelationshipMap.md` |
+## Domain Vocabulary
 
-## Naming policy
+| Term | Type | Definition |
+|---|---|---|
+| `ResourceType` | union | Resource enum, currently only `"grain"`. |
+| `Inventory` | object | Resource amounts keyed by resource type; currently `{ grain: number }`. |
+| `RecipeType` | union | Recipe enum, currently only `"produce-grain"`. |
+| `ProductionRecipe` | object | Recipe metadata with `durationTicks` and `output`. |
+| `BuildingType` | union | Building enum, currently only `"farm"`. |
+| `Building` | object | Building instance with `id`, `type`, and `recipeType`. |
+| `GameLoopState` | object | Core runtime state: `tick`, `money`, `inventory`, `buildings`. |
 
-These conventions carry forward from the shared stack and workflow:
+## Implemented Constants
 
-- Business logic should not use fallback aliases for renamed fields.
-- Database persistence should prefer explicit, stable field names.
-- Snapshot or historical fields must be explicit about event timing.
+| Constant | Value | Source |
+|---|---|---|
+| `STARTING_BALANCE_EUR` | `1000` | `src/lib/constants/gamestate.ts` |
+| `GRAIN_PER_PRODUCE_GRAIN_RECIPE` | `1` | `src/lib/constants/recipeConst.ts` |
+| `PRODUCE_GRAIN_RECIPE_DURATION_TICKS` | `1` | `src/lib/constants/recipeConst.ts` |
+
+## Naming Policy
+
+- Keep business logic naming explicit and stable.
+- Do not add fallback aliases for renamed fields.
+- Keep timing-specific names explicit when snapshots/history are added later.

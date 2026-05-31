@@ -2,7 +2,7 @@
 
 Turn-based single-player resource production simulation built on the planned React, TypeScript, Vite, Tailwind, ShadCN UI, Supabase, and Vitest stack.
 
-The project is currently in bootstrap: documentation, local agent skills, Cursor configuration, and planning files exist; the app runtime folders may not exist yet. Core simulation logic should live in services once implementation starts, while React components should stay focused on presentation and interaction.
+The project now has an initial implemented runtime slice: a minimal typed game loop (one building, one recipe, one inventory resource, manual tick button, and baseline test coverage). Planning docs and larger architecture sections are still active for upcoming systems. Core simulation logic should live in services, while React components should stay focused on presentation and interaction.
 
 ## Quick Start
 
