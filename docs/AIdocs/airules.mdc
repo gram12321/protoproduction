@@ -2,67 +2,80 @@
 alwaysApply: true
 ---
 
-# AI Instructions — Web Game (Proto Production)
+# AI Agent Rules
 
-## AI Code Generation Principles
+Canonical agent rules for this project. Keep `docs/AIdocs/airules.mdc` and `.cursor/rules/ai-agent-rule.mdc/airulesVS.instructions.md` mirrored.
 
-- Read `readme.md` and this file before making changes
-- After major updates, ask whether `readme.md` and `docs/versionlog.md` should be updated
-- Do not run `npm run build` unless asked
-- Do not `git commit` unless the user explicitly requests it
-- Start responses with an AI check message (1 = clear/simple, 5 = ambiguous/large):
+## Orientation
+
+- Project overview: `readme.md`
+- Repo router skill: `skills/webgamedev-gram/SKILL.md`
+- Domain glossary: `docs/CONTEXT.md`
+- Implementation status: `docs/AIdocs/AIDescriptions_coregame.md`
+- Ownership map: `docs/PROJECT_INFO.md`
+
+Before non-trivial work, read the smallest relevant subset of those files. Do not assume planned folders or services exist; check the repo first.
+
+## Response Start
+
+Start user-facing work with:
 
 ```text
 AI check: <1-5> - <brief reason>
 ```
 
-### Conventions (always apply)
+Use `1` for clear, low-risk work and `5` for broad, ambiguous, or high-risk work.
 
-- Follow this file and `readme.md`; deeper context in `docs/AIdocs/`
-- Do not run `npm run dev` unless asked — user may already have a dev server
-- Named ES module imports at top of file; avoid default exports
-- Prefer barrel imports: `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, `@/lib/constants`
-- Use shared hooks where they exist: `useLoadingState()`, `useGameStateWithData()`, `useGameState()`
-- Use shared UI types: `PageProps`, `NavigationProps`, `CompanyProps` from `@/components/UItypes.ts`
-- Domain terms from `docs/CONTEXT.md` when defined; do not reintroduce prior-game terminology without approval
+## Workflow Rules
 
-### Frontend (React)
+- Do not commit changes unless the user explicitly asks.
+- Do not start `npm run dev` unless the user asks.
+- Do not run `npm run build` by default; run it only when asked or when the change risk justifies it.
+- Do not run tests, lint, typecheck, or `git diff --check` after every small edit. Use focused verification when finishing meaningful work, for complex changes, or when requested.
+- For version history, follow `docs/versionlog.md` and `skills/webgamedev-gram/SKILL.md`: versionlog updates happen after commits exist and claims must be tied to verified evidence.
+- After major project updates, ask whether `readme.md` or project docs should be updated.
 
-- React app at repo root (Vite)
-- Tailwind + ShadCN only for styling
-- Data via Supabase through services/database layer
-- Components: `src/components/ui/`
-- Pages: `src/components/pages/`
+## Architecture Rules
 
-### Database
+- Business logic belongs in `src/lib/services/`.
+- Supabase reads and writes belong in `src/lib/database/`.
+- React pages and components should stay focused on presentation and interaction.
+- Prefer barrel imports where they exist: `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
+- Use shared types from `src/lib/types/` and `src/components/UItypes.ts` when those files exist.
+- Use named ES module imports at the top of files.
+- Extract tunable gameplay numbers to `src/lib/constants/`.
+- Persisted gameplay data should be company-scoped through the current company flow.
+- Services should trigger global or topic updates after state-changing writes when that pattern exists.
 
-- Supabase PostgreSQL; company-scoped rows via `company_id`
-- Use current-company helpers for DB operations
-- Schema changes: validate on dev DB, then `migrations/`
+## Frontend Rules
 
-### Critical Architecture Rules
+- Stack target: React, TypeScript, Vite, Tailwind, ShadCN UI, and Supabase.
+- Use Tailwind and ShadCN/Radix primitives for UI composition.
+- Prefer existing hooks such as `useLoadingState()`, `useGameStateWithData()`, and `useGameState()` when they exist and match the local pattern.
+- Do not call Supabase directly from page components.
+- Put top-level game pages under `src/components/pages/` and shared UI under `src/components/ui/` when those folders exist.
 
-#### Multi-company
+## Domain Rules
 
-- All persisted gameplay data is company-scoped
-- Services → database → global/topic updates → reactive UI
-- No direct Supabase calls from page components
-#### Frontend Development (React) 
-- **Location**: All React code is in **root directory** (moved from `frontend/` subdirectory for cleaner structure)
-- **Styling**: Use **Tailwind CSS** and ShadCN UI exclusively. No Bootstrap or custom CSS
-- **Data Integration**: Frontend reads data from **Supabase database** via real-time subscriptions
-- **Components**: Use ShadCN-style components in `src/components/ui/`
-#### Service layer
+- Use terms from `docs/CONTEXT.md` only once they are defined.
+- Do not reintroduce copied prior-project domain terminology, paths, or examples without explicit approval.
+- Keep requirement categories, scoring concepts, and variable relationships separate unless explicitly redesigning them.
+- Update `docs/VariableRelationshipMap.md` when meaningful variable dependencies are documented.
 
-- Business logic in `src/lib/services/` by domain (`core/`, `sales/`, `finance/`, `<domain>/`)
-- No gameplay calculations in React components
+## Database Rules
 
+- Supabase schema changes should be validated against the intended development database before migration SQL is finalized.
+- Store SQL changes under `migrations/`.
+- Keep database mappers and shared types aligned with schema changes.
+- Do not add legacy field aliases or backward-compatibility branches unless the user explicitly requests them.
 
-#### MCP tools
+## Skill Routing
 
-- Git history: MCP GitHub tools (`get_commit`, `list_commits`, etc.) — not `git log` / `git show`
-- Supabase: MCP Supabase tools for schema and remote DB when applicable
-#### MCP Tools Integration
-- **Git Operations**: Use MCP GitHub tools, never terminal git commands
-- **Database Operations**: Use MCP Supabase tools for schema changes and migrations
-- **Version Management**: Update versionlog.md with each significant change
+Use `skills/webgamedev-gram/SKILL.md` for the full routing matrix. In short:
+
+- Bugs, regressions, and failing tests: `skills/superpowers/systematic-debugging/SKILL.md`
+- React and TypeScript implementation: `skills/best-practices/js-ts-best-practices/SKILL.md`
+- React performance or render behavior: `skills/best-practices/react-best-practices/SKILL.md`
+- ShadCN/Radix UI work: `skills/best-practices/shadcn-best-practices/SKILL.md`
+- Supabase/Postgres work: `skills/best-practices/supabase-best-practices/SKILL.md`
+- Completion claims: `skills/superpowers/verification-before-completion/SKILL.md`

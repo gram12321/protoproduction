@@ -82,7 +82,7 @@ The following are non-default here and should primarily be used via the superpow
 - Keep pages and UI components focused on presentation and interaction.
 - Prefer barrel imports from `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
 - Use shared types from `src/lib/types/` and `src/components/UItypes.ts`.
-- Follow domain terminology from `docs/CONTEXT.md` once defined; do not reuse winery-specific terms from the prior project.
+- Follow domain terminology from `docs/CONTEXT.md` once defined; do not reuse prior-project domain terms.
 - Do not add legacy data-shape support unless explicitly requested.
 - Keep persisted gameplay data company-scoped via current company flow.
 - Services should trigger global updates for state changes.

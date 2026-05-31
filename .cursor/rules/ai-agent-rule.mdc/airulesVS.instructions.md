@@ -1,59 +1,81 @@
 ---
 applyTo: '**'
 ---
-## AI Instructions for Winemaker Version 0.4
 
-## AI Code Generation Principles
+# AI Agent Rules
 
-- Read @readme.md and this file before making any changes
-- After major updates ALWAYS ask to update @readme.md and docs\versionlog.md 
-- DONT USE git commit, User prefers to commit himself
-- Start every response with the AI-Check-Message where you respond how sure you are you understand the userrequest, and how sure you are that you can solve it. From a scale from 1 to 5. 1 is Absolutly sure i understand this simple and ununambiguous request, that im sure i can solve satisfying. 5 is Unsure what the user requrest, but it seems like a large and complex task that i dont really know how to solve. Give a short feedback of why the promt is easy/difficalut
- Example "AI check: 5 [Clear request but complex task, that require change of many files]"
+Canonical agent rules for this project. Keep `docs/AIdocs/airules.mdc` and `.cursor/rules/ai-agent-rule.mdc/airulesVS.instructions.md` mirrored.
 
-### 💡 Copilot/AIAGENT Conventions (Always Apply)
-- Follow all instructions in this file and the `README.md`. CodeBrief and a Summary Of concept is available in docs\
-- Do not use `npm run dev` unless specifically told to. The user already has a dev server running.
-- Use named imports; avoid default exports.
-- Use ES `import` modules, not `require`.
-- Place imports at the top of each file; no inline imports.
-- **ALWAYS use barrel exports/imports**: Use `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils` for imports
-- **ALWAYS use custom hooks**: Use `useLoadingState()`, `useGameStateWithData()`, `useGameState()` for state management
-- **ALWAYS use shared interfaces**: Use `PageProps`, `NavigationProps`, `CompanyProps` from `@/components/UItypes`
+## Orientation
 
-### ✅ Key AI Code & Architecture Rules
+- Project overview: `readme.md`
+- Repo router skill: `skills/webgamedev-gram/SKILL.md`
+- Domain glossary: `docs/CONTEXT.md`
+- Implementation status: `docs/AIdocs/AIDescriptions_coregame.md`
+- Ownership map: `docs/PROJECT_INFO.md`
 
-#### Frontend Development (React) 
-- **Location**: All React code is in **root directory** (moved from `frontend/` subdirectory for cleaner structure)
-- **Styling**: Use **Tailwind CSS** and ShadCN UI exclusively. No Bootstrap or custom CSS
-- **Data Integration**: Frontend reads data from **Supabase database** via real-time subscriptions
-- **Components**: Use ShadCN-style components in `src/components/ui/`
-- **Pages**: `src/pages/` (Dashboard, finance, vineyard, sales ect. )
+Before non-trivial work, read the smallest relevant subset of those files. Do not assume planned folders or services exist; check the repo first.
 
-#### Database & Storage
-- **Supabase**: PostgreSQL database with real-time subscriptions
-- **Authentication**: Built-in Supabase auth system
+## Response Start
 
-### 🎯 **CRITICAL GAME SYSTEM RULES**
+Start user-facing work with:
 
-#### Multi-Company Architecture
-- **Company Isolation**: All data is company-scoped via `company_id` foreign keys
-- **Company Switching**: Use `getCurrentCompanyId()` utility for all database operations
-- **Game State**: Multi-company support with company-specific time, money, prestige
-- **Data Flow**: Services → Database → Global Updates → Reactive UI
+```text
+AI check: <1-5> - <brief reason>
+```
 
-#### Service Layer Architecture
-- **Business Logic**: Never put calculations in components - use services
-- **Service Organization**: `src/lib/services/` organized by domain (user/, sales/, wine/, core/)
-- **Reactive Updates**: Services trigger global updates, components auto-refresh
-- **Database Operations**: Use service layer, not direct Supabase calls in components
+Use `1` for clear, low-risk work and `5` for broad, ambiguous, or high-risk work.
 
-#### Activity System
-- **Work Calculation**: Use `calculateTotalWork()` for all activities
-- **Activity Categories**: PLANTING, HARVESTING, CRUSHING, FERMENTATION, etc.
-- **UI Integration**: Use `ActivityPanel` and `ActivityCard` components
+## Workflow Rules
 
-#### MCP Tools Integration
-- **Git Operations**: Use MCP GitHub tools, never terminal git commands
-- **Database Operations**: Use MCP Supabase tools for schema changes and migrations
-- **Version Management**: Update versionlog.md with each significant change
+- Do not commit changes unless the user explicitly asks.
+- Do not start `npm run dev` unless the user asks.
+- Do not run `npm run build` by default; run it only when asked or when the change risk justifies it.
+- Do not run tests, lint, typecheck, or `git diff --check` after every small edit. Use focused verification when finishing meaningful work, for complex changes, or when requested.
+- For version history, follow `docs/versionlog.md` and `skills/webgamedev-gram/SKILL.md`: versionlog updates happen after commits exist and claims must be tied to verified evidence.
+- After major project updates, ask whether `readme.md` or project docs should be updated.
+
+## Architecture Rules
+
+- Business logic belongs in `src/lib/services/`.
+- Supabase reads and writes belong in `src/lib/database/`.
+- React pages and components should stay focused on presentation and interaction.
+- Prefer barrel imports where they exist: `@/components/ui`, `@/hooks`, `@/lib/services`, `@/lib/utils`, and `@/lib/constants`.
+- Use shared types from `src/lib/types/` and `src/components/UItypes.ts` when those files exist.
+- Use named ES module imports at the top of files.
+- Extract tunable gameplay numbers to `src/lib/constants/`.
+- Persisted gameplay data should be company-scoped through the current company flow.
+- Services should trigger global or topic updates after state-changing writes when that pattern exists.
+
+## Frontend Rules
+
+- Stack target: React, TypeScript, Vite, Tailwind, ShadCN UI, and Supabase.
+- Use Tailwind and ShadCN/Radix primitives for UI composition.
+- Prefer existing hooks such as `useLoadingState()`, `useGameStateWithData()`, and `useGameState()` when they exist and match the local pattern.
+- Do not call Supabase directly from page components.
+- Put top-level game pages under `src/components/pages/` and shared UI under `src/components/ui/` when those folders exist.
+
+## Domain Rules
+
+- Use terms from `docs/CONTEXT.md` only once they are defined.
+- Do not reintroduce copied prior-project domain terminology, paths, or examples without explicit approval.
+- Keep requirement categories, scoring concepts, and variable relationships separate unless explicitly redesigning them.
+- Update `docs/VariableRelationshipMap.md` when meaningful variable dependencies are documented.
+
+## Database Rules
+
+- Supabase schema changes should be validated against the intended development database before migration SQL is finalized.
+- Store SQL changes under `migrations/`.
+- Keep database mappers and shared types aligned with schema changes.
+- Do not add legacy field aliases or backward-compatibility branches unless the user explicitly requests them.
+
+## Skill Routing
+
+Use `skills/webgamedev-gram/SKILL.md` for the full routing matrix. In short:
+
+- Bugs, regressions, and failing tests: `skills/superpowers/systematic-debugging/SKILL.md`
+- React and TypeScript implementation: `skills/best-practices/js-ts-best-practices/SKILL.md`
+- React performance or render behavior: `skills/best-practices/react-best-practices/SKILL.md`
+- ShadCN/Radix UI work: `skills/best-practices/shadcn-best-practices/SKILL.md`
+- Supabase/Postgres work: `skills/best-practices/supabase-best-practices/SKILL.md`
+- Completion claims: `skills/superpowers/verification-before-completion/SKILL.md`
