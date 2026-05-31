@@ -47,6 +47,7 @@ export function GameShellPage() {
                 <p>Current tick: {gameState.tick}</p>
                 <p>Money: EUR {gameState.money}</p>
                 <p>Building type: {gameState.buildings[0]?.type}</p>
+                <p>Building city: {gameState.buildings[0]?.city}</p>
                 <p>Recipe: Produce Grain (1 tick)</p>
                 <p>Grain in inventory: {gameState.inventory.grain}</p>
               </div>

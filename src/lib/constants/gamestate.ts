@@ -13,6 +13,7 @@ export const INITIAL_GAME_LOOP_STATE: GameLoopState = {
       id: "farm-1",
       type: "farm",
       recipeType: "produce-grain",
+      city: "copenhagen",
     },
   ],
 };
