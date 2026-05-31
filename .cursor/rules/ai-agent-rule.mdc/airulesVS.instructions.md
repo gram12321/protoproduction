@@ -4,12 +4,12 @@ applyTo: '**'
 
 # AI Agent Rules
 
-Canonical agent rules for this project. Keep `docs/AIdocs/airules.mdc` and `.cursor/rules/ai-agent-rule.mdc/airulesVS.instructions.md` mirrored.
+Canonical agent rules for this project. Keep the rule body mirrored across `docs/AIdocs/airules.mdc`, `.cursor/rules/ai-agent-rule.mdc/airulesVS.instructions.md`, `docs/AIdocs/copilot-instructions.md`, `.github/copilot-instructions.md`, and `AGENTS.md`.
 
 ## Orientation
 
 - Project overview: `readme.md`
-- Repo router skill: `skills/webgamedev-gram/SKILL.md`
+- Repo router skill: `.agents/skills/webgamedev-gram/SKILL.md`
 - Domain glossary: `docs/CONTEXT.md`
 - Implementation status: `docs/AIdocs/AIDescriptions_coregame.md`
 - Ownership map: `docs/PROJECT_INFO.md`
@@ -32,7 +32,7 @@ Use `1` for clear, low-risk work and `5` for broad, ambiguous, or high-risk work
 - Do not start `npm run dev` unless the user asks.
 - Do not run `npm run build` by default; run it only when asked or when the change risk justifies it.
 - Do not run tests, lint, typecheck, or `git diff --check` after every small edit. Use focused verification when finishing meaningful work, for complex changes, or when requested.
-- For version history, follow `docs/versionlog.md` and `skills/webgamedev-gram/SKILL.md`: versionlog updates happen after commits exist and claims must be tied to verified evidence.
+- For version history, follow `docs/versionlog.md` and `.agents/skills/webgamedev-gram/SKILL.md`: versionlog updates happen after commits exist and claims must be tied to verified evidence.
 - After major project updates, ask whether `readme.md` or project docs should be updated.
 
 ## Architecture Rules
@@ -71,11 +71,11 @@ Use `1` for clear, low-risk work and `5` for broad, ambiguous, or high-risk work
 
 ## Skill Routing
 
-Use `skills/webgamedev-gram/SKILL.md` for the full routing matrix. In short:
+Use `.agents/skills/webgamedev-gram/SKILL.md` for the full routing matrix. In short:
 
-- Bugs, regressions, and failing tests: `skills/superpowers/systematic-debugging/SKILL.md`
-- React and TypeScript implementation: `skills/best-practices/js-ts-best-practices/SKILL.md`
-- React performance or render behavior: `skills/best-practices/react-best-practices/SKILL.md`
-- ShadCN/Radix UI work: `skills/best-practices/shadcn-best-practices/SKILL.md`
-- Supabase/Postgres work: `skills/best-practices/supabase-best-practices/SKILL.md`
-- Completion claims: `skills/superpowers/verification-before-completion/SKILL.md`
+- Bugs, regressions, and failing tests: `.agents/skills/superpowers/systematic-debugging/SKILL.md`
+- React and TypeScript implementation: `.agents/skills/best-practices/js-ts-best-practices/SKILL.md`
+- React performance or render behavior: `.agents/skills/best-practices/react-best-practices/SKILL.md`
+- ShadCN/Radix UI work: `.agents/skills/best-practices/shadcn-best-practices/SKILL.md`
+- Supabase/Postgres work: `.agents/skills/best-practices/supabase-best-practices/SKILL.md`
+- Completion claims: `.agents/skills/superpowers/verification-before-completion/SKILL.md`

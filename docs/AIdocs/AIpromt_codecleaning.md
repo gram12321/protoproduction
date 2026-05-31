@@ -59,4 +59,4 @@ Before claiming cleanup done:
 - No CRUD outside `src/lib/database/`
 - Tunable gameplay numbers in `src/lib/constants/`, not scattered magic numbers
 
-See also `skills/webgamedev-gram/SKILL.md` completion sanitary gate.
+See also `.agents/skills/webgamedev-gram/SKILL.md` completion sanitary gate.

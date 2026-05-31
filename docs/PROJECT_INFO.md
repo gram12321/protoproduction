@@ -18,7 +18,7 @@ Ownership map for **where code will live**. Behavior and shared-system patterns:
 |---|---|
 | `readme.md` | Entry point, quick start, doc map |
 | `docs/` | Project docs (`CONTEXT.md`, `PROJECT_INFO.md`, `AIdocs/`, …) |
-| `skills/` | Local agent skills (`webgamedev-gram`, superpowers, best-practices) |
+| `.agents/skills/` | Local agent skills (`webgamedev-gram`, superpowers, best-practices) |
 | `migrations/` | SQL migrations (when schema exists) |
 
 No `src/`, `package.json`, or `tests/` in repo yet.

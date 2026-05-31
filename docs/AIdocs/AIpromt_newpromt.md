@@ -20,7 +20,7 @@ Domain mechanics are **not fully specified yet** — read `docs/CONTEXT.md` befo
 
 For architecture or large features, also check `docs/superpowers/specs/` and `docs/superpowers/plans/` — treat as non-authoritative unless code or `AIDescriptions_coregame.md` confirms.
 
-Repo router skill (if using local skills): `skills/webgamedev-gram/SKILL.md`.
+Repo router skill (if using local skills): `.agents/skills/webgamedev-gram/SKILL.md`.
 
 ## Current System Snapshot (bootstrap)
 

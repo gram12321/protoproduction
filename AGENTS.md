@@ -1,7 +1,3 @@
----
-applyTo: '**'
----
-
 # AI Agent Rules
 
 Canonical agent rules for this project. Keep the rule body mirrored across `docs/AIdocs/airules.mdc`, `.cursor/rules/ai-agent-rule.mdc/airulesVS.instructions.md`, `docs/AIdocs/copilot-instructions.md`, `.github/copilot-instructions.md`, and `AGENTS.md`.

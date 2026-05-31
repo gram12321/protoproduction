@@ -77,7 +77,11 @@ The canonical docs-side agent rules live in `docs/AIdocs/airules.mdc`.
 
 Cursor keeps a mirrored copy at `.cursor/rules/ai-agent-rule.mdc/airulesVS.instructions.md`.
 
-The detailed repo routing skill lives in `skills/webgamedev-gram/SKILL.md`.
+VS Code Copilot keeps its default always-on copy at `.github/copilot-instructions.md`.
+
+Codex and other compatible agents can use `AGENTS.md` as the repo-level always-on instruction file.
+
+The detailed repo routing skill lives in `.agents/skills/webgamedev-gram/SKILL.md`.
 
 ## Version Log Workflow
 
