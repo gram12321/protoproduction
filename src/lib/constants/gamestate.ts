@@ -17,6 +17,7 @@ export const INITIAL_GAME_LOOP_STATE: GameLoopState = {
       previousEfficiency: 0,
       targetEfficiency: 0,
       currentEfficiency: 0,
+      currentRecipeWorkProgress: 0,
       recipeType: "produce-grain",
     },
   ],

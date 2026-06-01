@@ -10,6 +10,6 @@ export interface RecipeOutput {
 export interface ProductionRecipe {
   type: RecipeType;
   name: string;
-  durationTicks: number;
+  workRequired: number;
   output: RecipeOutput;
 }

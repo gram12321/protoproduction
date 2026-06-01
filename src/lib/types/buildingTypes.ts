@@ -11,5 +11,6 @@ export interface Building {
   previousEfficiency: number;
   targetEfficiency: number;
   currentEfficiency: number;
+  currentRecipeWorkProgress: number;
   recipeType: RecipeType;
 }

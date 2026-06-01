@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui";
+import { RECIPE_BY_TYPE } from "@/lib/constants";
 import {
   calculateMaxStaff,
+  calculateEffectiveBuildingWorkPerTick,
   createInitialGameLoopState,
   decreaseBuildingSize,
   getMinimumWorkersForBuildingType,
@@ -13,6 +15,12 @@ import {
 export function GameShellPage() {
   const [gameState, setGameState] = useState(createInitialGameLoopState);
   const primaryBuilding = gameState.buildings[0];
+  const primaryRecipe = primaryBuilding
+    ? RECIPE_BY_TYPE[primaryBuilding.recipeType]
+    : undefined;
+  const primaryWorkPerTick = primaryBuilding
+    ? calculateEffectiveBuildingWorkPerTick(primaryBuilding)
+    : 0;
 
   function handleStaffChange(buildingId: string, requestedStaff: number) {
     setGameState((previousState) =>
@@ -46,7 +54,7 @@ export function GameShellPage() {
                 Smallest game loop
               </p>
               <h1 className="text-4xl font-semibold tracking-normal text-balance sm:text-5xl">
-                One farm produces grain every tick.
+                One farm converts work into grain output.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground">
                 This baseline has one resource type, one building type, one recipe,
@@ -101,7 +109,17 @@ export function GameShellPage() {
                   Target efficiency:{" "}
                   {(primaryBuilding?.targetEfficiency ?? 0).toFixed(3)}
                 </p>
-                <p>Recipe: Produce Grain (1 tick)</p>
+                <p>Recipe: {primaryRecipe?.name}</p>
+                <p>
+                  Work required: {primaryRecipe?.workRequired ?? 0}
+                </p>
+                <p>
+                  Effective work this tick: {primaryWorkPerTick.toFixed(3)}
+                </p>
+                <p>
+                  Current recipe work progress:{" "}
+                  {(primaryBuilding?.currentRecipeWorkProgress ?? 0).toFixed(3)}
+                </p>
                 <p>Grain in inventory: {gameState.inventory.grain}</p>
               </div>
 

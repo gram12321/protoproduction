@@ -18,6 +18,8 @@ describe("App", () => {
     expect(screen.getByText(/previous efficiency:\s*0\.000/i)).toBeInTheDocument();
     expect(screen.getByText(/current efficiency:\s*0\.000/i)).toBeInTheDocument();
     expect(screen.getByText(/target efficiency:\s*0\.000/i)).toBeInTheDocument();
+    expect(screen.getByText(/work required:\s*100/i)).toBeInTheDocument();
+    expect(screen.getByText(/current recipe work progress:\s*0\.000/i)).toBeInTheDocument();
 
     const staffSlider = screen.getByRole("slider", {
       name: /hire staff for farm-1/i,
@@ -49,5 +51,6 @@ describe("App", () => {
     expect(screen.getByText(/previous efficiency:\s*0\.000/i)).toBeInTheDocument();
     expect(screen.getByText(/current efficiency:\s*0\.56[89]/i)).toBeInTheDocument();
     expect(screen.getByText(/target efficiency:\s*0\.909/i)).toBeInTheDocument();
+    expect(screen.getByText(/current recipe work progress:\s*13\.76[34]/i)).toBeInTheDocument();
   });
 });
