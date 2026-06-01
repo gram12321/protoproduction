@@ -8,5 +8,8 @@ export interface Building {
   type: BuildingType;
   size: BuildingSize;
   currentStaff: number;
+  previousEfficiency: number;
+  targetEfficiency: number;
+  currentEfficiency: number;
   recipeType: RecipeType;
 }

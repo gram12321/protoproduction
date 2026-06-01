@@ -15,6 +15,9 @@ describe("App", () => {
     expect(screen.getByText(/min workers:\s*2/i)).toBeInTheDocument();
     expect(screen.getByText(/max staff:\s*2/i)).toBeInTheDocument();
     expect(screen.getByText(/current staff:\s*2/i)).toBeInTheDocument();
+    expect(screen.getByText(/previous efficiency:\s*0\.000/i)).toBeInTheDocument();
+    expect(screen.getByText(/current efficiency:\s*0\.000/i)).toBeInTheDocument();
+    expect(screen.getByText(/target efficiency:\s*0\.000/i)).toBeInTheDocument();
 
     const staffSlider = screen.getByRole("slider", {
       name: /hire staff for farm-1/i,
@@ -43,5 +46,8 @@ describe("App", () => {
     expect(screen.getByText(/current tick:\s*1/i)).toBeInTheDocument();
     expect(screen.getByText(/money:\s*eur\s*1000/i)).toBeInTheDocument();
     expect(screen.getByText(/grain in inventory:\s*1/i)).toBeInTheDocument();
+    expect(screen.getByText(/previous efficiency:\s*0\.000/i)).toBeInTheDocument();
+    expect(screen.getByText(/current efficiency:\s*0\.56[89]/i)).toBeInTheDocument();
+    expect(screen.getByText(/target efficiency:\s*0\.909/i)).toBeInTheDocument();
   });
 });

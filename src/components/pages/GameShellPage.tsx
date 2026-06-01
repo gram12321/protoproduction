@@ -89,6 +89,18 @@ export function GameShellPage() {
                     : 0}
                 </p>
                 <p>Current staff: {primaryBuilding?.currentStaff ?? 0}</p>
+                <p>
+                  Previous efficiency:{" "}
+                  {(primaryBuilding?.previousEfficiency ?? 0).toFixed(3)}
+                </p>
+                <p>
+                  Current efficiency:{" "}
+                  {(primaryBuilding?.currentEfficiency ?? 0).toFixed(3)}
+                </p>
+                <p>
+                  Target efficiency:{" "}
+                  {(primaryBuilding?.targetEfficiency ?? 0).toFixed(3)}
+                </p>
                 <p>Recipe: Produce Grain (1 tick)</p>
                 <p>Grain in inventory: {gameState.inventory.grain}</p>
               </div>
