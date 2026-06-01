@@ -12,6 +12,8 @@ export const INITIAL_GAME_LOOP_STATE: GameLoopState = {
     {
       id: "farm-1",
       type: "farm",
+      size: 1,
+      currentStaff: 2,
       recipeType: "produce-grain",
     },
   ],

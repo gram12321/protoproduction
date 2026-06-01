@@ -1,12 +1,39 @@
 import { useState } from "react";
 import { Button } from "@/components/ui";
-import { createInitialGameLoopState, processGameTick } from "@/lib/services";
+import {
+  calculateMaxStaff,
+  createInitialGameLoopState,
+  decreaseBuildingSize,
+  getMinimumWorkersForBuildingType,
+  increaseBuildingSize,
+  processGameTick,
+  setBuildingStaff,
+} from "@/lib/services";
 
 export function GameShellPage() {
   const [gameState, setGameState] = useState(createInitialGameLoopState);
+  const primaryBuilding = gameState.buildings[0];
+
+  function handleStaffChange(buildingId: string, requestedStaff: number) {
+    setGameState((previousState) =>
+      setBuildingStaff(previousState, buildingId, requestedStaff),
+    );
+  }
 
   function handleRunTick() {
     setGameState((previousState) => processGameTick(previousState));
+  }
+
+  function handleIncreaseBuildingSize(buildingId: string) {
+    setGameState((previousState) =>
+      increaseBuildingSize(previousState, buildingId),
+    );
+  }
+
+  function handleDecreaseBuildingSize(buildingId: string) {
+    setGameState((previousState) =>
+      decreaseBuildingSize(previousState, buildingId),
+    );
   }
 
   return (
@@ -23,7 +50,8 @@ export function GameShellPage() {
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground">
                 This baseline has one resource type, one building type, one recipe,
-                and one inventory where production is stored.
+                and one inventory where production is stored. Buildings now also
+                have a size and staffing capacity.
               </p>
             </div>
 
@@ -46,9 +74,75 @@ export function GameShellPage() {
               <div className="space-y-3 text-sm leading-6">
                 <p>Current tick: {gameState.tick}</p>
                 <p>Money: EUR {gameState.money}</p>
-                <p>Building type: {gameState.buildings[0]?.type}</p>
+                <p>Building type: {primaryBuilding?.type}</p>
+                <p>Building size: {primaryBuilding?.size}</p>
+                <p>
+                  Min workers:{" "}
+                  {primaryBuilding
+                    ? getMinimumWorkersForBuildingType(primaryBuilding.type)
+                    : 0}
+                </p>
+                <p>
+                  Max staff: {" "}
+                  {primaryBuilding
+                    ? calculateMaxStaff(primaryBuilding.type, primaryBuilding.size)
+                    : 0}
+                </p>
+                <p>Current staff: {primaryBuilding?.currentStaff ?? 0}</p>
                 <p>Recipe: Produce Grain (1 tick)</p>
                 <p>Grain in inventory: {gameState.inventory.grain}</p>
+              </div>
+
+              <div className="space-y-3 rounded-md border p-4">
+                <p className="text-sm font-medium">Hire staff</p>
+                {gameState.buildings.map((building) => {
+                  const maxStaff = calculateMaxStaff(building.type, building.size);
+
+                  return (
+                    <div key={building.id} className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        {building.type} ({building.size})
+                      </p>
+                      <label
+                        htmlFor={`staff-slider-${building.id}`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        Staff: {building.currentStaff} / {maxStaff}
+                      </label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleIncreaseBuildingSize(building.id)}
+                      >
+                        Increase size +1
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDecreaseBuildingSize(building.id)}
+                      >
+                        Decrease size -1
+                      </Button>
+                      <input
+                        id={`staff-slider-${building.id}`}
+                        type="range"
+                        min={0}
+                        max={maxStaff}
+                        value={building.currentStaff}
+                        onChange={(event) =>
+                          handleStaffChange(
+                            building.id,
+                            Number(event.target.value),
+                          )
+                        }
+                        className="w-full"
+                        aria-label={`Hire staff for ${building.id}`}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

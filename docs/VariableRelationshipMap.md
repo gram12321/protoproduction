@@ -6,14 +6,21 @@ fill in domain names and variables as design lands in [CONTEXT.md](CONTEXT.md). 
 
 Stable terminology, constants, parameters, and variable descriptions live in [CONTEXT.md](CONTEXT.md). This document describes **how** variables should relate to each other through gameflow once those terms exist.
 
-## Current implemented baseline (2026-05-31)
+## Current implemented baseline (2026-06-01)
 
 The runtime currently has one concrete dependency chain:
 
 - `GameLoopState.tick` increments by `+1` each manual tick.
-- `Building(recipeType="produce-grain")` resolves to `ProductionRecipe`.
+- `Building(type, size, currentStaff, recipeType)` resolves to `ProductionRecipe`.
 - `ProductionRecipe.output` adds `1 grain` to `Inventory.grain`.
+- `Building.size` drives staffing capacity (`maxStaff`) through `calculateMaxStaff(type, size)`.
+- Manual staffing can be set from `0` up to `maxStaff`.
+- Decreasing size does not auto-reduce `currentStaff`, so `currentStaff` may be above `maxStaff` temporarily.
 - `GameLoopState.money` starts at `1000` and does not change in the baseline tick flow.
+
+Important current constraint:
+
+- `size` and `currentStaff` are not yet production multipliers. Output still comes only from recipe output values.
 
 Prestige or progression event sources may be inventoried separately when that subsystem is implemented (e.g. under `docs/superpowers/completed/`).
 
@@ -37,7 +44,25 @@ When adding a new variable, update this map **and** `CONTEXT.md` in the same cha
 
 ## 3) Top-Level Gameflow
 
-Replace node labels when domain phases are named. Keep the same dependency idea: setup → ongoing production → transformation → inventory → sales/markets → history/progression.
+### 3.1 Current concrete loop (implemented)
+
+```mermaid
+flowchart LR
+  BLD["Building"] --> RCP["Recipe"]
+  RCP --> PROD["Production output"]
+  PROD --> INV["Inventory"]
+```
+
+Current meaning:
+
+- Building selects recipe execution context.
+- Recipe defines output resource and amount.
+- Production applies recipe output per tick.
+- Inventory is the persisted sink for produced resources.
+
+### 3.2 Expanded target loop (template)
+
+Replace node labels when domain phases are named. Keep the same dependency idea: setup -> ongoing production -> transformation -> inventory -> sales/markets -> history/progression.
 
 ```mermaid
 flowchart LR
@@ -101,6 +126,21 @@ These rules should hold regardless of final variable names:
 ## 6) Subsystem Diagrams
 
 Replace placeholder labels with `CONTEXT.md` terms. Keep subgraph boundaries when implementing.
+
+### 6.0 Building capacity and production mapping (current)
+
+```mermaid
+flowchart LR
+  BT["Building type"] --> BS["Building size"]
+  BS --> SR["Staff requirements / bounds\nmin workers, max staff"]
+  SR --> CS["Current staff"]
+  BT --> RCP["Recipe"]
+  RCP --> PROD["Production"]
+```
+
+Current implementation note:
+
+- Staff and size currently define staffing bounds, but they do not yet modify production output.
 
 ### 6.1 Site, Resource, and First Boundary Identity
 
