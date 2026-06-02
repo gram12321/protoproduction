@@ -30,10 +30,12 @@ This update supersedes the earlier bootstrap note:
 - `GameLoopState` includes `tick`, `money`, `inventory`, and `buildings`.
 - `src/lib/constants/gamestate.ts` defines `STARTING_BALANCE_EUR = 1000` and initial state.
 - `src/lib/constants/recipeConst.ts` defines one recipe: `produce-grain` (1 tick -> 1 grain).
+- `src/lib/constants/popConst.ts` defines per-resource base consumption values for city demand previews.
 - `src/lib/services/core/gameinit.ts` creates fresh initial state copies.
 - `src/lib/services/core/gametick.ts` runs building recipes and increments tick.
 - `src/lib/services/inventory.ts` mutates resource totals via `addResource`.
-- `src/components/pages/GameShellPage.tsx` exposes a manual `Run 1 tick` action and state readout.
+- `src/lib/services/marketplace/marketplaceDemand.ts` derives base city demand from population and base consumption.
+- `src/components/pages/GameShellPage.tsx` exposes a manual `Run 1 tick` action, simulation state readout, and a city marketplace preview panel.
 - `tests/App.test.tsx` verifies tick progression, grain accumulation, and unchanged starting money.
 
 ## Database And Persistence

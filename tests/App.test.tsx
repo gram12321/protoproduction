@@ -34,6 +34,20 @@ describe("App", () => {
 
     render(<App />);
 
+    expect(
+      screen.getByRole("heading", { name: /city marketplace/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/base city demand/i)).toBeInTheDocument();
+    expect(screen.getByText(/population:\s*660\.000/i)).toBeInTheDocument();
+    expect(screen.getByText(/^66\.000$/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/marketplace city/i), {
+      target: { value: "aarhus" },
+    });
+
+    expect(screen.getByText(/population:\s*290\.000/i)).toBeInTheDocument();
+    expect(screen.getByText(/^29\.000$/i)).toBeInTheDocument();
+
     expect(screen.getByText(/current tick:\s*0/i)).toBeInTheDocument();
     expect(screen.getByText(/money:\s*€\s*1,000/i)).toBeInTheDocument();
     expect(screen.getByText(/grain in inventory:\s*0/i)).toBeInTheDocument();

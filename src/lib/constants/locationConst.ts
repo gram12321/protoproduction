@@ -33,25 +33,25 @@ export const NATION_DATA: Record<NationType, NationDefinition> = {
 const CITY_BASELINE_DATA: Record<CityType, CityBaselineDefinition> = {
   copenhagen: {
     nation: "denmark",
-    population: 660000,
+    population: 66,
     wealthDelta: 0.03,
     educationLevelDelta: 0.04,
   },
   aarhus: {
     nation: "denmark",
-    population: 290000,
+    population: 29,
     wealthDelta: 0.01,
     educationLevelDelta: -0.02,
   },
   cairo: {
     nation: "egypt",
-    population: 10200000,
+    population: 1020,
     wealthDelta: -0.02,
     educationLevelDelta: -0.03,
   },
   moscow: {
     nation: "russia",
-    population: 13000000,
+    population: 1300,
     wealthDelta: 0.02,
     educationLevelDelta: 0.01,
   },

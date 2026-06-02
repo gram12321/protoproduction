@@ -6,6 +6,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CityMarketplaceCard,
 } from "@/components/ui";
 import {
   AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE,
@@ -287,23 +288,27 @@ export function GameShellPage() {
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">Simulation state</CardTitle>
-              <CardDescription>Global resources and progress</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6">
-              <p>Current tick: {gameState.tick}</p>
-              <p>Money: {formatNumber(gameState.money, { currency: true })}</p>
-              <p>Buildings count: {gameState.buildings.length}</p>
-              <p>Grain in inventory: {gameState.inventory.grain}</p>
-              <p>Flour in inventory: {gameState.inventory.flour}</p>
-              <p>Sugarcain in inventory: {gameState.inventory.sugarcain}</p>
-              <p>Sugar in inventory: {gameState.inventory.sugar}</p>
-              <p>Bread in inventory: {gameState.inventory.bread}</p>
-              <p>Cake in inventory: {gameState.inventory.cake}</p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <CityMarketplaceCard />
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">Simulation state</CardTitle>
+                <CardDescription>Global resources and progress</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm leading-6">
+                <p>Current tick: {gameState.tick}</p>
+                <p>Money: {formatNumber(gameState.money, { currency: true })}</p>
+                <p>Buildings count: {gameState.buildings.length}</p>
+                <p>Grain in inventory: {gameState.inventory.grain}</p>
+                <p>Flour in inventory: {gameState.inventory.flour}</p>
+                <p>Sugarcain in inventory: {gameState.inventory.sugarcain}</p>
+                <p>Sugar in inventory: {gameState.inventory.sugar}</p>
+                <p>Bread in inventory: {gameState.inventory.bread}</p>
+                <p>Cake in inventory: {gameState.inventory.cake}</p>
+              </CardContent>
+            </Card>
+          </div>
         </section>
       </div>
     </main>

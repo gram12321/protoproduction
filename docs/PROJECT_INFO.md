@@ -32,11 +32,11 @@ The `src/` and `tests/` trees now exist with a minimal core loop baseline.
 
 | Area | Implemented files |
 |---|---|
-| Core constants | `src/lib/constants/gamestate.ts`, `src/lib/constants/recipeConst.ts` |
-| Core services | `src/lib/services/core/gameinit.ts`, `src/lib/services/core/gametick.ts`, `src/lib/services/inventory.ts` |
+| Core constants | `src/lib/constants/gamestate.ts`, `src/lib/constants/recipeConst.ts`, `src/lib/constants/popConst.ts` |
+| Core services | `src/lib/services/core/gameinit.ts`, `src/lib/services/core/gametick.ts`, `src/lib/services/inventory.ts`, `src/lib/services/marketplace/marketplaceDemand.ts` |
 | Core types | `src/lib/types/gamestateTypes.ts`, `src/lib/types/inventoryTypes.ts`, `src/lib/types/buildingTypes.ts`, `src/lib/types/recipeTypes.ts` |
-| UI shell | `src/components/pages/GameShellPage.tsx` |
-| Verification | `tests/App.test.tsx` |
+| UI shell | `src/components/pages/GameShellPage.tsx`, `src/components/ui/city-marketplace-card.tsx`, `src/components/ui/native-select.tsx`, `src/components/ui/table.tsx` |
+| Verification | `tests/App.test.tsx`, `tests/marketplaceDemand.test.ts` |
 
 ## Planned app layout (`src/`)
 

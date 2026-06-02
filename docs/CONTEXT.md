@@ -32,6 +32,9 @@ The runtime currently implements a minimal production simulation:
 | `CITY_DATA` | record | City-to-definition map with each city's `nation`, `population`, `wealth`, and `educationLevel`. |
 | `CITY_TO_NATION_MAP` | record | City-to-nation lookup map. |
 | `CITY_TYPES` | array | Ordered list of selectable city ids for UI and creation flows. |
+| `City marketplace` | UI/system | Per-city marketplace view that surfaces resource demand rows for one selected city at a time. |
+| `BASE_CONSUMPTION_BY_RESOURCE` | record | Resource-to-base-consumption map used as the per-pop, per-turn starting point for demand calculations. |
+| `Base city demand` | number | Derived per-resource demand for one city, calculated as city population multiplied by base consumption for that resource. |
 | `getNationForCity()` | function | Derives a building's nation from its selected city. |
 | `NATION_TOTAL_POPULATION` | record | Nation-to-population totals derived from all city populations in that nation. |
 | `GameLoopState` | object | Core runtime state: `tick`, `money`, `inventory`, `buildings`. |
@@ -43,6 +46,7 @@ The runtime currently implements a minimal production simulation:
 | `STARTING_BALANCE_EUR` | `1000` | `src/lib/constants/gamestate.ts` |
 | `GRAIN_PER_PRODUCE_GRAIN_RECIPE` | `1` | `src/lib/constants/recipeConst.ts` |
 | `PRODUCE_GRAIN_RECIPE_DURATION_TICKS` | `1` | `src/lib/constants/recipeConst.ts` |
+| `BASE_CONSUMPTION_BY_RESOURCE` | resource-specific values from `0.0001` to `0.1` | `src/lib/constants/popConst.ts` |
 
 ## Naming Policy
 
