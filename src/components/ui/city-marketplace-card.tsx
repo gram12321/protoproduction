@@ -4,7 +4,11 @@ import {
   CITY_TYPES,
   BASE_CONSUMPTION_BY_RESOURCE,
 } from "@/lib/constants";
-import { calculateBaseCityDemandByResource } from "@/lib/services";
+import {
+  calculateBaseCityDemandByResource,
+  calculateBaseCityPriceByResource,
+  calculateBaseResourceCostByResource,
+} from "@/lib/services";
 import type { CityType, ResourceType } from "@/lib/types";
 import { formatNumber } from "@/lib/utils";
 import {
@@ -32,6 +36,8 @@ export function CityMarketplaceCard() {
   const [selectedCity, setSelectedCity] = useState<CityType>(CITY_TYPES[0]);
 
   const baseDemandByResource = calculateBaseCityDemandByResource(selectedCity);
+  const baseResourceCostByResource = calculateBaseResourceCostByResource();
+  const baseCityPriceByResource = calculateBaseCityPriceByResource(selectedCity);
 
   return (
     <Card>
@@ -39,7 +45,8 @@ export function CityMarketplaceCard() {
         <div className="space-y-1">
           <CardTitle className="text-2xl">City marketplace</CardTitle>
           <CardDescription>
-            Base demand preview for {formatLocationName(selectedCity)}.
+            Base retail price and demand preview for{" "}
+            {formatLocationName(selectedCity)}.
           </CardDescription>
         </div>
 
@@ -72,6 +79,8 @@ export function CityMarketplaceCard() {
             <TableHeader>
               <TableRow>
                 <TableHead>Resource</TableHead>
+                <TableHead className="text-right">Base cost</TableHead>
+                <TableHead className="text-right">Base city price</TableHead>
                 <TableHead className="text-right">Base city demand</TableHead>
               </TableRow>
             </TableHeader>
@@ -80,6 +89,16 @@ export function CityMarketplaceCard() {
                 <TableRow key={resource}>
                   <TableCell className="font-medium capitalize">
                     {resource}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatNumber(
+                      baseResourceCostByResource[resource as ResourceType],
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatNumber(
+                      baseCityPriceByResource[resource as ResourceType],
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     {formatNumber(
@@ -93,7 +112,11 @@ export function CityMarketplaceCard() {
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Population: {formatNumber(CITY_DATA[selectedCity].population)}
+          Population: {formatNumber(CITY_DATA[selectedCity].population)} | Wealth:{" "}
+          {formatNumber(CITY_DATA[selectedCity].wealth, {
+            decimals: 2,
+            forceDecimals: true,
+          })}
         </p>
       </CardContent>
     </Card>

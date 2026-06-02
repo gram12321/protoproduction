@@ -1,7 +1,8 @@
-import type { ResourceType } from "./inventoryTypes";
+import type { ResourceType } from "./resourceTypes";
 
 export type RecipeType =
   | "produce-grain"
+  | "pump-water"
   | "produce-flour"
   | "grow-sugarcain"
   | "process-sugarcain"

@@ -1,7 +1,11 @@
 import type { CityType, NationType } from "./locationTypes";
 import type { RecipeType } from "./recipeTypes";
 
-export type BuildingType = "farm" | "foodprocessingfactory" | "bakery";
+export type BuildingType =
+  | "farm"
+  | "foodprocessingfactory"
+  | "bakery"
+  | "utilityfacility";
 export type BuildingSize = number;
 
 export interface Building {

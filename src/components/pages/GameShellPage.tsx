@@ -83,7 +83,7 @@ export function GameShellPage() {
                 Smallest game loop
               </p>
               <h1 className="text-4xl font-semibold tracking-normal text-balance sm:text-5xl">
-                Build farms, food processing factories, and bakeries.
+                Build farms, utility facilities, food processing factories, and bakeries.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground">
                 Recipe chains now support multiple building types and ingredient
@@ -102,6 +102,7 @@ export function GameShellPage() {
                 aria-label="Building type"
               >
                 <option value="farm">Farm</option>
+                <option value="utilityfacility">Utility facility</option>
                 <option value="foodprocessingfactory">
                   Food processing factory
                 </option>

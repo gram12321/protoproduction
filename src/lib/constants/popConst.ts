@@ -6,6 +6,7 @@ import type { ResourceType } from "@/lib/types";
 // later resources such as iron ore may end up with no end-consumer demand.
 export const BASE_CONSUMPTION_BY_RESOURCE: Record<ResourceType, number> = {
   grain: 0.001,
+  water: 0.02,
   flour: 0.003,
   sugarcain: 0.0001,
   sugar: 0.01,

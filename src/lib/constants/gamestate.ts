@@ -7,6 +7,7 @@ export const INITIAL_GAME_LOOP_STATE: GameLoopState = {
   money: STARTING_BALANCE_EUR,
   inventory: {
     grain: 0,
+    water: 0,
     flour: 0,
     sugarcain: 0,
     sugar: 0,

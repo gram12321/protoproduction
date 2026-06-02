@@ -6,12 +6,14 @@ export const MIN_WORKERS_BY_BUILDING_TYPE: Record<BuildingType, number> = {
   farm: 2,
   foodprocessingfactory: 2,
   bakery: 2,
+  utilityfacility: 2,
 };
 
 export const DEFAULT_RECIPE_BY_BUILDING_TYPE: Record<BuildingType, RecipeType> = {
   farm: "produce-grain",
   foodprocessingfactory: "produce-flour",
   bakery: "bake-bread",
+  utilityfacility: "pump-water",
 };
 
 export const AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE: Record<
@@ -21,9 +23,11 @@ export const AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE: Record<
   farm: ["produce-grain", "grow-sugarcain"],
   foodprocessingfactory: ["produce-flour", "process-sugarcain"],
   bakery: ["bake-bread", "bake-cake"],
+  utilityfacility: ["pump-water"],
 };
 
 export const STAFF_GROWTH_BASE = 2;
+export const BASE_WAGE = 10;
 
 export const STAFF_EFFICIENCY_CURVE_STEEPNESS = 1.2;
 export const EFFICIENCY_TICK_LERP_MIN = 0.08;

@@ -1,19 +1,18 @@
 # Core Game Mechanics — Implementation Orientation
 
-Last updated: 2026-05-31
-Status: Bootstrap — domain gameplay systems are not defined in this repo yet. This file describes **stack, architecture, and shared infrastructure** to preserve from the prior project workflow.
-
+Last updated: 2026-06-03
+Status: Current implementation orientation plus deferred architecture notes.
 Use this to see what patterns exist, where shared code should live, and what is **not** authoritative until `docs/CONTEXT.md` and code confirm it.
-
-Update note: the current implemented minimum loop status is tracked in this file as of 2026-05-31.
+Update note: the current implemented production, retail demand, and base-price slice is tracked in this file as of 2026-06-03.
 
 Design docs under `docs/superpowers/plans/` and `docs/superpowers/specs/` are history from prior work unless this file, `docs/CONTEXT.md`, `readme.md`, or the code says otherwise.
 
-## Status Update (2026-05-31)
+## Status Update (2026-06-03)
 
 This update supersedes the earlier bootstrap note:
 
 - The minimum runtime loop is implemented and test-covered.
+- Multi-resource recipe chains, utility water, city retail demand, intrinsic base resource cost, and city-adjusted base price are implemented.
 - Existing planning sections below remain intentional and should be treated as future or deferred scope unless code confirms implementation.
 
 ## Current Architecture
@@ -29,14 +28,18 @@ This update supersedes the earlier bootstrap note:
 
 - `GameLoopState` includes `tick`, `money`, `inventory`, and `buildings`.
 - `src/lib/constants/gamestate.ts` defines `STARTING_BALANCE_EUR = 1000` and initial state.
-- `src/lib/constants/recipeConst.ts` defines one recipe: `produce-grain` (1 tick -> 1 grain).
-- `src/lib/constants/popConst.ts` defines per-resource base consumption values for city demand previews.
+- `src/lib/types/resourceTypes.ts` defines current resources and cycle-dependent resource metadata through `RESOURCE_DEFINITIONS`.
+- `src/lib/constants/recipeConst.ts` defines the active recipe chain: grain, water, flour, sugarcain, sugar, bread, and cake.
+- `src/lib/constants/buildingConst.ts` defines building-to-recipe mappings, staffing constants, `BASE_WAGE`, and `BASE_WORK_PER_WORKER_PER_TICK`.
+- `src/lib/constants/popConst.ts` defines per-resource base consumption values for city retail demand previews.
 - `src/lib/services/core/gameinit.ts` creates fresh initial state copies.
 - `src/lib/services/core/gametick.ts` runs building recipes and increments tick.
 - `src/lib/services/inventory.ts` mutates resource totals via `addResource`.
-- `src/lib/services/marketplace/marketplaceDemand.ts` derives base city demand from population and base consumption.
-- `src/components/pages/GameShellPage.tsx` exposes a manual `Run 1 tick` action, simulation state readout, and a city marketplace preview panel.
-- `tests/App.test.tsx` verifies tick progression, grain accumulation, and unchanged starting money.
+- `src/lib/services/marketplace/marketplaceDemand.ts` derives base city demand from population, wealth, and base consumption.
+- `src/lib/services/marketplace/resourceBaseCost.ts` derives intrinsic base resource cost and city wealth adjusted base city price.
+- `src/components/pages/GameShellPage.tsx` exposes a manual `Run 1 tick` action, simulation state readout, building creation, recipe switching, and a city marketplace preview panel.
+- `src/components/ui/city-marketplace-card.tsx` displays consumer retail rows with base cost, base city price, and base city demand.
+- `tests/App.test.tsx`, `tests/marketplaceDemand.test.ts`, and `tests/resourceBaseCost.test.ts` verify the current runtime, demand, and price reference behavior.
 
 ## Database And Persistence
 

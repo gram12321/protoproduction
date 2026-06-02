@@ -1,13 +1,8 @@
-export type ResourceType =
-  | "grain"
-  | "flour"
-  | "sugarcain"
-  | "sugar"
-  | "bread"
-  | "cake";
+import type { ResourceType } from "./resourceTypes";
 
 export interface Inventory {
   grain: number;
+  water: number;
   flour: number;
   sugarcain: number;
   sugar: number;

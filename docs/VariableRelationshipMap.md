@@ -1,14 +1,12 @@
 # Variable Relationship Map
 
-Date: 2026-05-30  
-Status: Template — This is not how the final version should be. This is a muckup, not nessesary related to the current project. 
-fill in domain names and variables as design lands in [CONTEXT.md](CONTEXT.md). Remove irrellevant stuff ect. 
-
+Date: 2026-06-03
+Status: Current implemented production, retail demand, and base-price relationships are documented explicitly. Older template sections below remain for deferred systems.
 Stable terminology, constants, parameters, and variable descriptions live in [CONTEXT.md](CONTEXT.md). This document describes **how** variables should relate to each other through gameflow once those terms exist.
 
-## Current implemented baseline (2026-06-02)
+## Current implemented baseline (2026-06-03)
 
-The runtime currently has a concrete multi-building dependency chain:
+The runtime currently has a concrete multi-building production and retail-preview chain:
 
 - `GameLoopState.tick` increments by `+1` each manual tick.
 - `Building(type, size, currentStaff, recipeType)` resolves to `ProductionRecipe` through `RECIPE_BY_TYPE`.
@@ -19,12 +17,19 @@ The runtime currently has a concrete multi-building dependency chain:
 - Decreasing size does not auto-reduce `currentStaff`, so `currentStaff` may be above `maxStaff` temporarily.
 - Recipe execution consumes required inputs at cycle start, then adds outputs at cycle completion.
 - Recipes may require multiple input resources (for example cake requires flour and sugar).
+- `RESOURCE_DEFINITIONS` is the source of truth for `ResourceType` and resource metadata.
+- `water` is marked `isCycleDependentResource` and uses `fixedBaseCost = 16`.
+- Intrinsic `baseResourceCost` is derived from the cheapest producing recipe path, except cycle-dependent resources use `fixedBaseCost`.
+- `baseCityPrice` is derived as `baseResourceCost * (1 + city.wealth)`.
+- `baseCityDemand` is derived as `city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`.
+- The current city marketplace is a consumer retail preview, not a general input trading market.
 - `GameLoopState.money` starts at `1000` and does not change in the baseline tick flow.
 
 Important current constraints:
 
 - `size` and `currentStaff` do not directly multiply output amount; they influence effective work and completion speed.
-- Current food chain includes a `sugar` requirement for cake, but there is no in-chain `sugar` producer yet.
+- `baseResourceCost` and `baseCityPrice` are reference values only; they do not yet consume inventory or change money.
+- Price elasticity, price subsidies, product quality, education-based quality, and city-adjusted wage calculations are planned later.
 
 Prestige or progression event sources may be inventoried separately when that subsystem is implemented (e.g. under `docs/superpowers/completed/`).
 
@@ -33,18 +38,11 @@ Prestige or progression event sources may be inventoried separately when that su
 This map answers:
 
 - Which variables are produced at each stage of gameplay?
-- Which variables are snapshots, and which continue to change?
 - Which subsystems consume each variable later (UI, economy, contracts, highscores, achievements)?
 - Which global progression overlays (weather, research, prestige, ownership/finance rules) feed into production and market outcomes?
 
 When adding a new variable, update this map **and** `CONTEXT.md` in the same change.
 
-## 2) Reading Rules
-
-- Arrows mean **data dependency**, not call order.
-- **Snapshot** nodes are frozen values copied from current state at a named event boundary (e.g. harvest, completion, sale close).
-- Separate signals must stay separate in docs and code — e.g. site/static quality vs product quality vs aggregate score. Do not treat distinct metrics as aliases.
-- Placeholders in angle brackets (e.g. `<qualityIndex>`) are intentional until real names are chosen in `CONTEXT.md`.
 
 ## 3) Top-Level Gameflow
 
@@ -161,31 +159,72 @@ Current implementation note:
 
 - Staff and size define staffing bounds and influence effective work speed through efficiency.
 
-### 6.0.1 First recipe chain: Food (implemented baseline)
+### 6.0.1 Current recipe chains: food and utility water
 
 ```mermaid
 flowchart LR
   FARM["Farm"] --> GRAIN_R["Grow Grain"]
   FARM --> CANE_R["Grow Sugarcain"]
+  UTIL["Utility Facility"] --> WATER_R["Pump Water"]
 
   GRAIN_R --> GRAIN_I["Inventory.grain"]
   CANE_R --> CANE_I["Inventory.sugarcain"]
+  WATER_R --> WATER_I["Inventory.water"]
 
   GRAIN_I --> MILL_R["Mill: Produce Flour"]
   MILL_R --> FLOUR_I["Inventory.flour"]
+
+  CANE_I --> SUGAR_R["Process Sugarcain"]
+  SUGAR_R --> SUGAR_I["Inventory.sugar"]
 
   FLOUR_I --> BREAD_R["Bakery: Bake Bread"]
   BREAD_R --> BREAD_I["Inventory.bread"]
 
   FLOUR_I --> CAKE_R["Bakery: Bake Cake"]
-  SUGAR_I["Inventory.sugar\n(external source for now)"] --> CAKE_R
+  SUGAR_I --> CAKE_R
   CAKE_R --> CAKE_I["Inventory.cake"]
 ```
 
 Food chain note:
 
 - Bread path is fully in-chain: `grain -> flour -> bread`.
-- Cake path is partially in-chain: `flour` is produced internally, `sugar` is currently external.
+- Cake path is fully in-chain: `grain -> flour`, `sugarcain -> sugar`, then `flour + sugar -> cake`.
+- Water is currently a no-input utility recipe and a cycle-dependent resource cost anchor.
+
+### 6.0.2 Retail demand and base price flow (current)
+
+```mermaid
+flowchart LR
+  BW["BASE_WAGE"] --> LAB["Recipe labor cost"]
+  BWORK["BASE_WORK_PER_WORKER_PER_TICK"] --> LAB
+  WR["recipe.workRequired"] --> LAB
+  OUTAMT["recipe.output.amount"] --> LAB
+
+  INPUTS["Recipe input resources"] --> INPCOST["Input base resource costs"]
+  INPCOST --> RCOST["Recipe cost per output unit"]
+  LAB --> RCOST
+  RCOST --> MINCOST["Cheapest producing recipe path"]
+
+  FIXED["fixedBaseCost\ncycle-dependent resources"] --> BASECOST["Base resource cost"]
+  MINCOST --> BASECOST
+
+  BASECOST --> CITYPRICE["Base city price"]
+  WEALTH["city.wealth"] --> CITYPRICE
+
+  POP["city.population"] --> DEMAND["Base city demand"]
+  WEALTH --> DEMAND
+  CONSUMPTION["BASE_CONSUMPTION_BY_RESOURCE"] --> DEMAND
+
+  CITYPRICE --> RETAIL["City marketplace row"]
+  DEMAND --> RETAIL
+```
+
+Current pricing formulas:
+
+- `baseResourceCost(resource)` is the cheapest recursive recipe cost unless `resource.isCycleDependentResource` is true.
+- `baseCityPrice(resource, city) = baseResourceCost(resource) * (1 + city.wealth)`.
+- `baseCityDemand(resource, city) = city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`.
+- Price elasticity, price subsidies, and product quality are planned second-pass modifiers and do not affect current demand.
 
 ### 6.1 Site, Resource, and First Boundary Identity
 
@@ -337,7 +376,7 @@ flowchart LR
 
 ## 7) Contract Relationships
 
-Template — add rows when contract requirement types exist.
+Deferred: add rows when contract requirement types exist.
 
 | Contract requirement | Source variable | Notes |
 |---|---|---|
@@ -371,6 +410,7 @@ Map each UI surface to which relationships it must explain (not just display a n
 | Origins / changelog tab | Characteristic changes by source |
 | Production log and analytics | Completion snapshots and trends |
 | Overlay center | Current overlay, per-site impact, forecast if any |
+| City marketplace | Consumer retail demand, intrinsic base resource cost, and city wealth adjusted base city price |
 | Market modals | Price/limit factors, economy/overlay pressure, loyalty |
 | Finance ownership panel | Special roles, distributions, conversion costs |
 
@@ -387,6 +427,7 @@ Use as a checklist when wiring a new variable group. Replace placeholders with r
 | Achievements | Threshold checks use persisted log scores; no silent fallbacks. |
 | Contracts | Separate requirement types for distinct signals (do not overload one field). |
 | Overlay integration | Bounded deviations via dedicated services; exposed in UI. |
+| City retail marketplace | Keep `baseResourceCost`, `baseCityPrice`, and `baseCityDemand` separate until price elasticity and quality are wired. |
 | Markets | Bulk/seasonal channels documented; research scaling explicit. |
 | Ownership slice | Active rules documented separately from deferred share-market runtime. |
 | Display-only data | Descriptors or tags marked display-only until gameplay consumes them. |

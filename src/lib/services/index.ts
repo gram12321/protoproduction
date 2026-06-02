@@ -11,3 +11,4 @@ export * from "./core/staffing";
 export * from "./core/gametick";
 export * from "./inventory";
 export * from "./marketplace/marketplaceDemand";
+export * from "./marketplace/resourceBaseCost";

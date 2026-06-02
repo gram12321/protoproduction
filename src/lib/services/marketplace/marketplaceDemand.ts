@@ -5,7 +5,11 @@ export function calculateBaseCityDemand(
   city: CityType,
   resource: ResourceType,
 ): number {
-  return CITY_DATA[city].population * BASE_CONSUMPTION_BY_RESOURCE[resource];
+  return (
+    CITY_DATA[city].population *
+    CITY_DATA[city].wealth *
+    BASE_CONSUMPTION_BY_RESOURCE[resource]
+  );
 }
 
 export function calculateBaseCityDemandByResource(
