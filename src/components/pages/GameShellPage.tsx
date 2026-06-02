@@ -11,6 +11,7 @@ import {
   AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE,
   RECIPE_BY_TYPE,
 } from "@/lib/constants";
+import { formatNumber } from "@/lib/utils";
 import type { BuildingType, RecipeType } from "@/lib/types";
 import {
   calculateMaxStaff,
@@ -159,19 +160,40 @@ export function GameShellPage() {
                       <p>Max staff: {maxStaff}</p>
                       <p>Current staff: {building.currentStaff}</p>
                       <p>
-                        Previous efficiency: {building.previousEfficiency.toFixed(3)}
+                        Previous efficiency:{" "}
+                        {formatNumber(building.previousEfficiency, {
+                          decimals: 3,
+                          forceDecimals: true,
+                        })}
                       </p>
                       <p>
-                        Current efficiency: {building.currentEfficiency.toFixed(3)}
+                        Current efficiency:{" "}
+                        {formatNumber(building.currentEfficiency, {
+                          decimals: 3,
+                          forceDecimals: true,
+                        })}
                       </p>
-                      <p>Target efficiency: {building.targetEfficiency.toFixed(3)}</p>
+                      <p>
+                        Target efficiency:{" "}
+                        {formatNumber(building.targetEfficiency, {
+                          decimals: 3,
+                          forceDecimals: true,
+                        })}
+                      </p>
                       <p>Work required: {recipe.workRequired}</p>
                       <p>
-                        Effective work this tick: {effectiveWorkThisTick.toFixed(3)}
+                        Effective work this tick:{" "}
+                        {formatNumber(effectiveWorkThisTick, {
+                          decimals: 3,
+                          forceDecimals: true,
+                        })}
                       </p>
                       <p>
                         Current recipe work progress:{" "}
-                        {building.currentRecipeWorkProgress.toFixed(3)}
+                        {formatNumber(building.currentRecipeWorkProgress, {
+                          decimals: 3,
+                          forceDecimals: true,
+                        })}
                       </p>
                       {!canStartRecipe && recipe.input?.length && (
                         <p className="text-xs font-medium text-destructive">
@@ -233,7 +255,7 @@ export function GameShellPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm leading-6">
               <p>Current tick: {gameState.tick}</p>
-              <p>Money: EUR {gameState.money}</p>
+              <p>Money: {formatNumber(gameState.money, { currency: true })}</p>
               <p>Buildings count: {gameState.buildings.length}</p>
               <p>Grain in inventory: {gameState.inventory.grain}</p>
               <p>Flour in inventory: {gameState.inventory.flour}</p>

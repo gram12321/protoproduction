@@ -5,11 +5,8 @@ import {
   STAFF_EFFICIENCY_CURVE_STEEPNESS,
 } from "@/lib/constants";
 import type { Building } from "@/lib/types";
+import { clamp01 } from "@/lib/utils";
 import { calculateMaxStaff } from "./buildingStaffing";
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
 
 export function calculateTargetEfficiencyFromStaffing(
   currentStaff: number,

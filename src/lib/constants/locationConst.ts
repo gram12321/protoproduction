@@ -6,16 +6,13 @@ import type {
   NationType,
   NationPopulationMap,
 } from "@/lib/types";
+import { clamp01 } from "@/lib/utils";
 
 interface CityBaselineDefinition {
   nation: NationType;
   population: number;
   wealthDelta: number;
   educationLevelDelta: number;
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }
 
 export const NATION_DATA: Record<NationType, NationDefinition> = {

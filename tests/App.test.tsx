@@ -32,7 +32,7 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByText(/current tick:\s*0/i)).toBeInTheDocument();
-    expect(screen.getByText(/money:\s*eur\s*1000/i)).toBeInTheDocument();
+    expect(screen.getByText(/money:\s*€\s*1,000/i)).toBeInTheDocument();
     expect(screen.getByText(/grain in inventory:\s*0/i)).toBeInTheDocument();
     expect(screen.getByText(/flour in inventory:\s*0/i)).toBeInTheDocument();
     expect(screen.getByText(/buildings count:\s*0/i)).toBeInTheDocument();
@@ -45,11 +45,11 @@ describe("App", () => {
     expect(screen.getByText(/min workers:\s*2/i)).toBeInTheDocument();
     expect(screen.getByText(/max staff:\s*2/i)).toBeInTheDocument();
     expect(screen.getByText(/current staff:\s*2/i)).toBeInTheDocument();
-    expect(screen.getByText(/previous efficiency:\s*0\.000/i)).toBeInTheDocument();
-    expect(screen.getByText(/current efficiency:\s*0\.000/i)).toBeInTheDocument();
-    expect(screen.getByText(/target efficiency:\s*0\.000/i)).toBeInTheDocument();
+    expect(screen.getByText(/previous efficiency:\s*0,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/current efficiency:\s*0,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/target efficiency:\s*0,000/i)).toBeInTheDocument();
     expect(screen.getByText(/work required:\s*100/i)).toBeInTheDocument();
-    expect(screen.getByText(/current recipe work progress:\s*0\.000/i)).toBeInTheDocument();
+    expect(screen.getByText(/current recipe work progress:\s*0,000/i)).toBeInTheDocument();
 
     const staffSlider = screen.getByRole("slider", {
       name: /hire staff for farm-1/i,
@@ -76,12 +76,12 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /run 1 tick/i }));
 
     expect(screen.getByText(/current tick:\s*1/i)).toBeInTheDocument();
-    expect(screen.getByText(/money:\s*eur\s*1000/i)).toBeInTheDocument();
+    expect(screen.getByText(/money:\s*€\s*1,000/i)).toBeInTheDocument();
     expect(screen.getByText(/grain in inventory:\s*1/i)).toBeInTheDocument();
-    expect(screen.getByText(/previous efficiency:\s*0\.000/i)).toBeInTheDocument();
-    expect(screen.getByText(/current efficiency:\s*0\.56[89]/i)).toBeInTheDocument();
-    expect(screen.getByText(/target efficiency:\s*0\.909/i)).toBeInTheDocument();
-    expect(screen.getByText(/current recipe work progress:\s*13\.76[34]/i)).toBeInTheDocument();
+    expect(screen.getByText(/previous efficiency:\s*0,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/current efficiency:\s*0,56[89]/i)).toBeInTheDocument();
+    expect(screen.getByText(/target efficiency:\s*0,909/i)).toBeInTheDocument();
+    expect(screen.getByText(/current recipe work progress:\s*13,76[34]/i)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/building type/i), {
       target: { value: "foodprocessingfactory" },
