@@ -1,6 +1,6 @@
 import type { RecipeType } from "./recipeTypes";
 
-export type BuildingType = "farm";
+export type BuildingType = "farm" | "mill";
 export type BuildingSize = number;
 
 export interface Building {

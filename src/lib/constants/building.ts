@@ -1,7 +1,15 @@
-import type { BuildingType } from "@/lib/types";
+import type { BuildingType, RecipeType } from "@/lib/types";
+
+export const INITIAL_BUILDING_SIZE = 1;
 
 export const MIN_WORKERS_BY_BUILDING_TYPE: Record<BuildingType, number> = {
   farm: 2,
+  mill: 2,
+};
+
+export const DEFAULT_RECIPE_BY_BUILDING_TYPE: Record<BuildingType, RecipeType> = {
+  farm: "produce-grain",
+  mill: "produce-flour",
 };
 
 export const STAFF_GROWTH_BASE = 2;

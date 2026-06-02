@@ -1,14 +1,11 @@
-import { addResource } from "@/lib/services/inventory";
 import type { GameLoopState } from "@/lib/types";
-import { processBuildingsTick } from "./buildingManager";
+import { processBuildingsTick } from "@/lib/services/buildings/buildingManager";
 
 export function processGameTick(state: GameLoopState): GameLoopState {
-  let nextInventory = { ...state.inventory };
-  const { nextBuildings, productionDeltas } = processBuildingsTick(state.buildings);
-
-  for (const delta of productionDeltas) {
-    nextInventory = addResource(nextInventory, delta.resource, delta.amount);
-  }
+  const { nextBuildings, nextInventory } = processBuildingsTick(
+    state.buildings,
+    state.inventory,
+  );
 
   return {
     ...state,

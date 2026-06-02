@@ -1,24 +1,22 @@
 import { RECIPE_BY_TYPE } from "@/lib/constants";
-import type { Building, ResourceType } from "@/lib/types";
+import type { Building, Inventory } from "@/lib/types";
 import { updateBuildingEfficiency } from "./buildingEfficiency";
 import { calculateEffectiveBuildingWorkPerTick } from "./buildingWork";
 
-export interface ProductionDelta {
-  resource: ResourceType;
-  amount: number;
-}
-
 export interface ProcessBuildingTickResult {
   nextBuilding: Building;
-  productionDeltas: ProductionDelta[];
+  nextInventory: Inventory;
 }
 
 export interface ProcessBuildingsTickResult {
   nextBuildings: Building[];
-  productionDeltas: ProductionDelta[];
+  nextInventory: Inventory;
 }
 
-export function processBuildingTick(building: Building): ProcessBuildingTickResult {
+export function processBuildingTick(
+  building: Building,
+  inventory: Inventory,
+): ProcessBuildingTickResult {
   const efficiencyUpdatedBuilding = updateBuildingEfficiency(building);
   const recipe = RECIPE_BY_TYPE[efficiencyUpdatedBuilding.recipeType];
   const effectiveWorkThisTick = calculateEffectiveBuildingWorkPerTick(
@@ -31,43 +29,59 @@ export function processBuildingTick(building: Building): ProcessBuildingTickResu
   const totalWorkProgress = previousWorkProgress + effectiveWorkThisTick;
 
   const safeWorkRequired = Math.max(recipe.workRequired, Number.EPSILON);
-  const completedRecipeCount = Math.floor(totalWorkProgress / safeWorkRequired);
+  const completedByWork = Math.floor(totalWorkProgress / safeWorkRequired);
+
+  const completedByInput = recipe.input
+    ? Math.floor(
+        Math.max(0, inventory[recipe.input.resource]) /
+          Math.max(recipe.input.amount, Number.EPSILON),
+      )
+    : completedByWork;
+
+  const completedRecipeCount = Math.max(
+    0,
+    Math.min(completedByWork, completedByInput),
+  );
+
   const remainingWorkProgress =
     totalWorkProgress - completedRecipeCount * safeWorkRequired;
 
-  const productionDeltas: ProductionDelta[] =
-    completedRecipeCount > 0
-      ? [
-          {
-            resource: recipe.output.resource,
-            amount: recipe.output.amount * completedRecipeCount,
-          },
-        ]
-      : [];
+  const nextInventory = { ...inventory };
+
+  if (recipe.input && completedRecipeCount > 0) {
+    nextInventory[recipe.input.resource] -=
+      recipe.input.amount * completedRecipeCount;
+  }
+
+  if (completedRecipeCount > 0) {
+    nextInventory[recipe.output.resource] +=
+      recipe.output.amount * completedRecipeCount;
+  }
 
   return {
     nextBuilding: {
       ...efficiencyUpdatedBuilding,
       currentRecipeWorkProgress: Math.max(0, remainingWorkProgress),
     },
-    productionDeltas,
+    nextInventory,
   };
 }
 
 export function processBuildingsTick(
   buildings: Building[],
+  inventory: Inventory,
 ): ProcessBuildingsTickResult {
   const nextBuildings: Building[] = [];
-  const productionDeltas: ProductionDelta[] = [];
+  let nextInventory = { ...inventory };
 
   for (const building of buildings) {
-    const result = processBuildingTick(building);
+    const result = processBuildingTick(building, nextInventory);
     nextBuildings.push(result.nextBuilding);
-    productionDeltas.push(...result.productionDeltas);
+    nextInventory = result.nextInventory;
   }
 
   return {
     nextBuildings,
-    productionDeltas,
+    nextInventory,
   };
 }

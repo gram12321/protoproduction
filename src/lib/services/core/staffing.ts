@@ -1,4 +1,4 @@
-import { calculateMaxStaff } from "./buildingStaffing";
+import { calculateMaxStaff } from "@/lib/services/buildings/buildingStaffing";
 import type { GameLoopState } from "@/lib/types";
 
 export function setBuildingStaff(

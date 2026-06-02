@@ -1,9 +1,18 @@
 import { useState } from "react";
-import { Button } from "@/components/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui";
 import { RECIPE_BY_TYPE } from "@/lib/constants";
+import type { BuildingType } from "@/lib/types";
 import {
   calculateMaxStaff,
   calculateEffectiveBuildingWorkPerTick,
+  createBuilding,
   createInitialGameLoopState,
   decreaseBuildingSize,
   getMinimumWorkersForBuildingType,
@@ -14,13 +23,8 @@ import {
 
 export function GameShellPage() {
   const [gameState, setGameState] = useState(createInitialGameLoopState);
-  const primaryBuilding = gameState.buildings[0];
-  const primaryRecipe = primaryBuilding
-    ? RECIPE_BY_TYPE[primaryBuilding.recipeType]
-    : undefined;
-  const primaryWorkPerTick = primaryBuilding
-    ? calculateEffectiveBuildingWorkPerTick(primaryBuilding)
-    : 0;
+  const [selectedBuildingType, setSelectedBuildingType] =
+    useState<BuildingType>("farm");
 
   function handleStaffChange(buildingId: string, requestedStaff: number) {
     setGameState((previousState) =>
@@ -30,6 +34,12 @@ export function GameShellPage() {
 
   function handleRunTick() {
     setGameState((previousState) => processGameTick(previousState));
+  }
+
+  function handleCreateBuilding() {
+    setGameState((previousState) =>
+      createBuilding(previousState, selectedBuildingType),
+    );
   }
 
   function handleIncreaseBuildingSize(buildingId: string) {
@@ -54,7 +64,7 @@ export function GameShellPage() {
                 Smallest game loop
               </p>
               <h1 className="text-4xl font-semibold tracking-normal text-balance sm:text-5xl">
-                One farm converts work into grain output.
+                Build farms and mills in a small production chain.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground">
                 This baseline has one resource type, one building type, one recipe,
@@ -64,97 +74,87 @@ export function GameShellPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
+              <select
+                id="building-type-select"
+                value={selectedBuildingType}
+                onChange={(event) =>
+                  setSelectedBuildingType(event.target.value as BuildingType)
+                }
+                className="h-10 rounded-md border bg-background px-3 text-sm"
+                aria-label="Building type"
+              >
+                <option value="farm">Farm</option>
+                <option value="mill">Mill</option>
+              </select>
+              <Button size="lg" variant="outline" onClick={handleCreateBuilding}>
+                Build building
+              </Button>
               <Button size="lg" onClick={handleRunTick}>
                 Run 1 tick
               </Button>
             </div>
-          </div>
 
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <div className="space-y-5">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Simulation state
-                </p>
-                <p className="mt-1 text-2xl font-semibold">Single-loop baseline</p>
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {gameState.buildings.map((building) => {
+                const maxStaff = calculateMaxStaff(building.type, building.size);
+                const recipe = RECIPE_BY_TYPE[building.recipeType];
+                const effectiveWorkThisTick =
+                  calculateEffectiveBuildingWorkPerTick(building);
 
-              <div className="space-y-3 text-sm leading-6">
-                <p>Current tick: {gameState.tick}</p>
-                <p>Money: EUR {gameState.money}</p>
-                <p>Building type: {primaryBuilding?.type}</p>
-                <p>Building size: {primaryBuilding?.size}</p>
-                <p>
-                  Min workers:{" "}
-                  {primaryBuilding
-                    ? getMinimumWorkersForBuildingType(primaryBuilding.type)
-                    : 0}
-                </p>
-                <p>
-                  Max staff: {" "}
-                  {primaryBuilding
-                    ? calculateMaxStaff(primaryBuilding.type, primaryBuilding.size)
-                    : 0}
-                </p>
-                <p>Current staff: {primaryBuilding?.currentStaff ?? 0}</p>
-                <p>
-                  Previous efficiency:{" "}
-                  {(primaryBuilding?.previousEfficiency ?? 0).toFixed(3)}
-                </p>
-                <p>
-                  Current efficiency:{" "}
-                  {(primaryBuilding?.currentEfficiency ?? 0).toFixed(3)}
-                </p>
-                <p>
-                  Target efficiency:{" "}
-                  {(primaryBuilding?.targetEfficiency ?? 0).toFixed(3)}
-                </p>
-                <p>Recipe: {primaryRecipe?.name}</p>
-                <p>
-                  Work required: {primaryRecipe?.workRequired ?? 0}
-                </p>
-                <p>
-                  Effective work this tick: {primaryWorkPerTick.toFixed(3)}
-                </p>
-                <p>
-                  Current recipe work progress:{" "}
-                  {(primaryBuilding?.currentRecipeWorkProgress ?? 0).toFixed(3)}
-                </p>
-                <p>Grain in inventory: {gameState.inventory.grain}</p>
-              </div>
-
-              <div className="space-y-3 rounded-md border p-4">
-                <p className="text-sm font-medium">Hire staff</p>
-                {gameState.buildings.map((building) => {
-                  const maxStaff = calculateMaxStaff(building.type, building.size);
-
-                  return (
-                    <div key={building.id} className="space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        {building.type} ({building.size})
+                return (
+                  <Card key={building.id}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg capitalize">
+                        {building.type} ({building.id})
+                      </CardTitle>
+                      <CardDescription>
+                        Recipe: {recipe.name}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm leading-6">
+                      <p>Building size: {building.size}</p>
+                      <p>
+                        Min workers: {getMinimumWorkersForBuildingType(building.type)}
                       </p>
+                      <p>Max staff: {maxStaff}</p>
+                      <p>Current staff: {building.currentStaff}</p>
+                      <p>
+                        Previous efficiency: {building.previousEfficiency.toFixed(3)}
+                      </p>
+                      <p>
+                        Current efficiency: {building.currentEfficiency.toFixed(3)}
+                      </p>
+                      <p>Target efficiency: {building.targetEfficiency.toFixed(3)}</p>
+                      <p>Work required: {recipe.workRequired}</p>
+                      <p>Effective work this tick: {effectiveWorkThisTick.toFixed(3)}</p>
+                      <p>
+                        Current recipe work progress: {building.currentRecipeWorkProgress.toFixed(3)}
+                      </p>
+
                       <label
                         htmlFor={`staff-slider-${building.id}`}
                         className="text-xs text-muted-foreground"
                       >
                         Staff: {building.currentStaff} / {maxStaff}
                       </label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleIncreaseBuildingSize(building.id)}
-                      >
-                        Increase size +1
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDecreaseBuildingSize(building.id)}
-                      >
-                        Decrease size -1
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleIncreaseBuildingSize(building.id)}
+                        >
+                          Increase size +1
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDecreaseBuildingSize(building.id)}
+                        >
+                          Decrease size -1
+                        </Button>
+                      </div>
                       <input
                         id={`staff-slider-${building.id}`}
                         type="range"
@@ -170,12 +170,26 @@ export function GameShellPage() {
                         className="w-full"
                         aria-label={`Hire staff for ${building.id}`}
                       />
-                    </div>
-                  );
-                })}
-              </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Simulation state</CardTitle>
+              <CardDescription>Global resources and progress</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm leading-6">
+              <p>Current tick: {gameState.tick}</p>
+              <p>Money: EUR {gameState.money}</p>
+              <p>Buildings count: {gameState.buildings.length}</p>
+              <p>Grain in inventory: {gameState.inventory.grain}</p>
+              <p>Flour in inventory: {gameState.inventory.flour}</p>
+            </CardContent>
+          </Card>
         </section>
       </div>
     </main>

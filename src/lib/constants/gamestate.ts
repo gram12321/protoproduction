@@ -7,18 +7,7 @@ export const INITIAL_GAME_LOOP_STATE: GameLoopState = {
   money: STARTING_BALANCE_EUR,
   inventory: {
     grain: 0,
+    flour: 0,
   },
-  buildings: [
-    {
-      id: "farm-1",
-      type: "farm",
-      size: 1,
-      currentStaff: 2,
-      previousEfficiency: 0,
-      targetEfficiency: 0,
-      currentEfficiency: 0,
-      currentRecipeWorkProgress: 0,
-      recipeType: "produce-grain",
-    },
-  ],
+  buildings: [],
 };
