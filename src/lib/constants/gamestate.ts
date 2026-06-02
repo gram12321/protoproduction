@@ -7,13 +7,11 @@ export const INITIAL_GAME_LOOP_STATE: GameLoopState = {
   money: STARTING_BALANCE_EUR,
   inventory: {
     grain: 0,
+    flour: 0,
+    sugarcain: 0,
+    sugar: 0,
+    bread: 0,
+    cake: 0,
   },
-  buildings: [
-    {
-      id: "farm-1",
-      type: "farm",
-      recipeType: "produce-grain",
-      city: "copenhagen",
-    },
-  ],
+  buildings: [],
 };

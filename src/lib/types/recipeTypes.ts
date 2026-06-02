@@ -1,6 +1,17 @@
 import type { ResourceType } from "./inventoryTypes";
 
-export type RecipeType = "produce-grain";
+export type RecipeType =
+  | "produce-grain"
+  | "produce-flour"
+  | "grow-sugarcain"
+  | "process-sugarcain"
+  | "bake-bread"
+  | "bake-cake";
+
+export interface RecipeInput {
+  resource: ResourceType;
+  amount: number;
+}
 
 export interface RecipeOutput {
   resource: ResourceType;
@@ -10,6 +21,7 @@ export interface RecipeOutput {
 export interface ProductionRecipe {
   type: RecipeType;
   name: string;
-  durationTicks: number;
+  workRequired: number;
+  input?: RecipeInput[];
   output: RecipeOutput;
 }
