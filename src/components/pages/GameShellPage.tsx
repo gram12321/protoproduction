@@ -100,6 +100,10 @@ export function GameShellPage() {
                 const recipe = RECIPE_BY_TYPE[building.recipeType];
                 const effectiveWorkThisTick =
                   calculateEffectiveBuildingWorkPerTick(building);
+                const canStartRecipe =
+                  !recipe.input ||
+                  building.currentRecipeWorkProgress > 0 ||
+                  gameState.inventory[recipe.input.resource] >= recipe.input.amount;
 
                 return (
                   <Card key={building.id}>
@@ -130,6 +134,11 @@ export function GameShellPage() {
                       <p>
                         Current recipe work progress: {building.currentRecipeWorkProgress.toFixed(3)}
                       </p>
+                      {!canStartRecipe && recipe.input && (
+                        <p className="text-xs font-medium text-destructive">
+                          Cannot start production: need {recipe.input.amount} {recipe.input.resource}.
+                        </p>
+                      )}
 
                       <label
                         htmlFor={`staff-slider-${building.id}`}

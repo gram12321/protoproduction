@@ -19,10 +19,10 @@ export function calculateTargetEfficiencyFromStaffing(
     return 0;
   }
 
-  const staffingRatio = Math.max(0, currentStaff / maxStaff);
-  const rawTarget = 1 - Math.exp(-staffingRatio * STAFF_EFFICIENCY_CURVE_STEEPNESS);
+  const staffingRatio = clamp01(Math.max(0, currentStaff / maxStaff));
+  const target = Math.pow(staffingRatio, STAFF_EFFICIENCY_CURVE_STEEPNESS);
 
-  return clamp01(rawTarget);
+  return clamp01(target);
 }
 
 export function updateBuildingEfficiency(building: Building): Building {

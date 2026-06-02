@@ -3,6 +3,29 @@ import userEvent from "@testing-library/user-event";
 import App from "@/App";
 
 describe("App", () => {
+  it("blocks recipe start without required input and warns in UI", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    fireEvent.change(screen.getByLabelText(/building type/i), {
+      target: { value: "mill" },
+    });
+    await user.click(screen.getByRole("button", { name: /build building/i }));
+
+    expect(
+      screen.getByText(/cannot start production:\s*need 1 grain/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/flour in inventory:\s*0/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /run 1 tick/i }));
+
+    expect(screen.getByText(/flour in inventory:\s*0/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/cannot start production:\s*need 1 grain/i),
+    ).toBeInTheDocument();
+  });
+
   it("runs the smallest game loop tick", async () => {
     const user = userEvent.setup();
 
@@ -55,9 +78,9 @@ describe("App", () => {
     expect(screen.getByText(/money:\s*eur\s*1000/i)).toBeInTheDocument();
     expect(screen.getByText(/grain in inventory:\s*1/i)).toBeInTheDocument();
     expect(screen.getByText(/previous efficiency:\s*0\.000/i)).toBeInTheDocument();
-    expect(screen.getByText(/current efficiency:\s*0\.56[89]/i)).toBeInTheDocument();
-    expect(screen.getByText(/target efficiency:\s*0\.909/i)).toBeInTheDocument();
-    expect(screen.getByText(/current recipe work progress:\s*13\.76[34]/i)).toBeInTheDocument();
+    expect(screen.getByText(/current efficiency:\s*0\.680/i)).toBeInTheDocument();
+    expect(screen.getByText(/target efficiency:\s*1\.000/i)).toBeInTheDocument();
+    expect(screen.getByText(/current recipe work progress:\s*36\.000/i)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/building type/i), {
       target: { value: "mill" },

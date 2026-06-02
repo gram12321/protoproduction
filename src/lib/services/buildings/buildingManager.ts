@@ -26,31 +26,46 @@ export function processBuildingTick(
     0,
     efficiencyUpdatedBuilding.currentRecipeWorkProgress,
   );
-  const totalWorkProgress = previousWorkProgress + effectiveWorkThisTick;
-
   const safeWorkRequired = Math.max(recipe.workRequired, Number.EPSILON);
-  const completedByWork = Math.floor(totalWorkProgress / safeWorkRequired);
-
-  const completedByInput = recipe.input
-    ? Math.floor(
-        Math.max(0, inventory[recipe.input.resource]) /
-          Math.max(recipe.input.amount, Number.EPSILON),
-      )
-    : completedByWork;
-
-  const completedRecipeCount = Math.max(
-    0,
-    Math.min(completedByWork, completedByInput),
-  );
-
-  const remainingWorkProgress =
-    totalWorkProgress - completedRecipeCount * safeWorkRequired;
-
   const nextInventory = { ...inventory };
 
-  if (recipe.input && completedRecipeCount > 0) {
-    nextInventory[recipe.input.resource] -=
-      recipe.input.amount * completedRecipeCount;
+  let remainingWork = Math.max(0, effectiveWorkThisTick);
+  let remainingWorkProgress = previousWorkProgress;
+  let completedRecipeCount = 0;
+
+  if (recipe.input && remainingWorkProgress === 0 && remainingWork > 0) {
+    const hasStartingInput =
+      nextInventory[recipe.input.resource] >= recipe.input.amount;
+
+    if (hasStartingInput) {
+      nextInventory[recipe.input.resource] -= recipe.input.amount;
+    } else {
+      remainingWork = 0;
+    }
+  }
+
+  while (remainingWork > 0) {
+    const workNeededToFinish = safeWorkRequired - remainingWorkProgress;
+    const appliedWork = Math.min(remainingWork, workNeededToFinish);
+
+    remainingWorkProgress += appliedWork;
+    remainingWork -= appliedWork;
+
+    if (remainingWorkProgress + Number.EPSILON >= safeWorkRequired) {
+      completedRecipeCount += 1;
+      remainingWorkProgress = 0;
+
+      if (recipe.input && remainingWork > 0) {
+        const hasInputForNextCycle =
+          nextInventory[recipe.input.resource] >= recipe.input.amount;
+
+        if (hasInputForNextCycle) {
+          nextInventory[recipe.input.resource] -= recipe.input.amount;
+        } else {
+          break;
+        }
+      }
+    }
   }
 
   if (completedRecipeCount > 0) {
