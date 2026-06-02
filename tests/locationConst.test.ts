@@ -1,6 +1,8 @@
 import {
   CITY_DATA,
+  CITY_TYPES,
   CITY_TO_NATION_MAP,
+  getNationForCity,
   NATION_DATA,
   NATION_TOTAL_POPULATION,
 } from "@/lib/constants";
@@ -11,6 +13,14 @@ describe("location constants", () => {
     expect(CITY_TO_NATION_MAP.aarhus).toBe("denmark");
     expect(CITY_TO_NATION_MAP.cairo).toBe("egypt");
     expect(CITY_TO_NATION_MAP.moscow).toBe("russia");
+  });
+
+  it("derives nation from city through the shared helper", () => {
+    expect(CITY_TYPES).toEqual(["copenhagen", "aarhus", "cairo", "moscow"]);
+    expect(getNationForCity("copenhagen")).toBe("denmark");
+    expect(getNationForCity("aarhus")).toBe("denmark");
+    expect(getNationForCity("cairo")).toBe("egypt");
+    expect(getNationForCity("moscow")).toBe("russia");
   });
 
   it("keeps nation totals equal to the sum of city populations", () => {

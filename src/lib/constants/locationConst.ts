@@ -80,6 +80,12 @@ export const CITY_TO_NATION_MAP: CityToNationMap = {
   moscow: CITY_DATA.moscow.nation,
 };
 
+export const CITY_TYPES = Object.keys(CITY_DATA) as CityType[];
+
+export function getNationForCity(city: CityType): NationType {
+  return CITY_TO_NATION_MAP[city];
+}
+
 const BASE_NATION_POPULATION: NationPopulationMap = {
   denmark: 0,
   egypt: 0,

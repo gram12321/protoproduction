@@ -9,10 +9,12 @@ import {
 } from "@/components/ui";
 import {
   AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE,
+  CITY_TYPES,
+  getNationForCity,
   RECIPE_BY_TYPE,
 } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
-import type { BuildingType, RecipeType } from "@/lib/types";
+import type { BuildingType, CityType, RecipeType } from "@/lib/types";
 import {
   calculateMaxStaff,
   calculateEffectiveBuildingWorkPerTick,
@@ -28,10 +30,15 @@ import {
   setBuildingStaff,
 } from "@/lib/services";
 
+function formatLocationName(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export function GameShellPage() {
   const [gameState, setGameState] = useState(createInitialGameLoopState);
   const [selectedBuildingType, setSelectedBuildingType] =
     useState<BuildingType>("farm");
+  const [selectedCity, setSelectedCity] = useState<CityType | "">("");
 
   function handleStaffChange(buildingId: string, requestedStaff: number) {
     setGameState((previousState) =>
@@ -44,8 +51,12 @@ export function GameShellPage() {
   }
 
   function handleCreateBuilding() {
+    if (!selectedCity) {
+      return;
+    }
+
     setGameState((previousState) =>
-      createBuilding(previousState, selectedBuildingType),
+      createBuilding(previousState, selectedBuildingType, selectedCity),
     );
   }
 
@@ -95,13 +106,39 @@ export function GameShellPage() {
                 </option>
                 <option value="bakery">Bakery</option>
               </select>
-              <Button size="lg" variant="outline" onClick={handleCreateBuilding}>
+              <select
+                id="building-city-select"
+                value={selectedCity}
+                onChange={(event) =>
+                  setSelectedCity(event.target.value as CityType | "")
+                }
+                className="h-10 rounded-md border bg-background px-3 text-sm"
+                aria-label="Building city"
+              >
+                <option value="">Select city</option>
+                {CITY_TYPES.map((city) => (
+                  <option key={city} value={city}>
+                    {formatLocationName(city)}
+                  </option>
+                ))}
+              </select>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={handleCreateBuilding}
+                disabled={!selectedCity}
+              >
                 Build building
               </Button>
               <Button size="lg" onClick={handleRunTick}>
                 Run 1 tick
               </Button>
             </div>
+            {selectedCity && (
+              <p className="text-sm text-muted-foreground">
+                Nation: {formatLocationName(getNationForCity(selectedCity))}
+              </p>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               {gameState.buildings.map((building) => {
@@ -126,6 +163,8 @@ export function GameShellPage() {
                       <CardDescription>Recipe: {recipe.name}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm leading-6">
+                      <p>City: {formatLocationName(building.city)}</p>
+                      <p>Nation: {formatLocationName(building.nation)}</p>
                       <label
                         htmlFor={`recipe-select-${building.id}`}
                         className="text-xs text-muted-foreground"

@@ -8,6 +8,9 @@ describe("App", () => {
 
     render(<App />);
 
+    fireEvent.change(screen.getByLabelText(/building city/i), {
+      target: { value: "copenhagen" },
+    });
     fireEvent.change(screen.getByLabelText(/building type/i), {
       target: { value: "bakery" },
     });
@@ -37,10 +40,20 @@ describe("App", () => {
     expect(screen.getByText(/flour in inventory:\s*0/i)).toBeInTheDocument();
     expect(screen.getByText(/buildings count:\s*0/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /build building/i }));
+    const buildButton = screen.getByRole("button", { name: /build building/i });
+    expect(buildButton).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/building city/i), {
+      target: { value: "copenhagen" },
+    });
+
+    expect(buildButton).toBeEnabled();
+    await user.click(buildButton);
 
     expect(screen.getByText(/buildings count:\s*1/i)).toBeInTheDocument();
     expect(screen.getByText(/farm \(farm-1\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/city:\s*copenhagen/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/nation:\s*denmark/i)).toHaveLength(2);
     expect(screen.getByText(/recipe:\s*grow grain/i)).toBeInTheDocument();
     expect(screen.getByText(/min workers:\s*2/i)).toBeInTheDocument();
     expect(screen.getByText(/max staff:\s*2/i)).toBeInTheDocument();
@@ -104,6 +117,9 @@ describe("App", () => {
 
     render(<App />);
 
+    fireEvent.change(screen.getByLabelText(/building city/i), {
+      target: { value: "copenhagen" },
+    });
     await user.click(screen.getByRole("button", { name: /build building/i }));
 
     fireEvent.change(screen.getByLabelText(/building type/i), {

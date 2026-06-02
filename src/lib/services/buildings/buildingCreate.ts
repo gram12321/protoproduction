@@ -1,5 +1,9 @@
-import type { Building, BuildingType, GameLoopState } from "@/lib/types";
-import { DEFAULT_RECIPE_BY_BUILDING_TYPE, INITIAL_BUILDING_SIZE } from "@/lib/constants";
+import type { Building, BuildingType, CityType, GameLoopState } from "@/lib/types";
+import {
+  DEFAULT_RECIPE_BY_BUILDING_TYPE,
+  getNationForCity,
+  INITIAL_BUILDING_SIZE,
+} from "@/lib/constants";
 import { getMinimumWorkersForBuildingType } from "./buildingStaffing";
 
 function getNextBuildingId(buildings: Building[], type: BuildingType): string {
@@ -25,6 +29,7 @@ function getNextBuildingId(buildings: Building[], type: BuildingType): string {
 export function createBuilding(
   state: GameLoopState,
   type: BuildingType = "farm",
+  city: CityType,
 ): GameLoopState {
   const nextBuilding: Building = {
     id: getNextBuildingId(state.buildings, type),
@@ -36,6 +41,8 @@ export function createBuilding(
     currentEfficiency: 0,
     currentRecipeWorkProgress: 0,
     recipeType: DEFAULT_RECIPE_BY_BUILDING_TYPE[type],
+    city,
+    nation: getNationForCity(city),
   };
 
   return {

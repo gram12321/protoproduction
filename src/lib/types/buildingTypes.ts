@@ -1,4 +1,4 @@
-import type { CityType } from "./locationTypes";
+import type { CityType, NationType } from "./locationTypes";
 import type { RecipeType } from "./recipeTypes";
 
 export type BuildingType = "farm" | "foodprocessingfactory" | "bakery";
@@ -15,4 +15,5 @@ export interface Building {
   currentRecipeWorkProgress: number;
   recipeType: RecipeType;
   city: CityType;
+  nation: NationType;
 }
