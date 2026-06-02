@@ -6,21 +6,25 @@ fill in domain names and variables as design lands in [CONTEXT.md](CONTEXT.md). 
 
 Stable terminology, constants, parameters, and variable descriptions live in [CONTEXT.md](CONTEXT.md). This document describes **how** variables should relate to each other through gameflow once those terms exist.
 
-## Current implemented baseline (2026-06-01)
+## Current implemented baseline (2026-06-02)
 
-The runtime currently has one concrete dependency chain:
+The runtime currently has a concrete multi-building dependency chain:
 
 - `GameLoopState.tick` increments by `+1` each manual tick.
-- `Building(type, size, currentStaff, recipeType)` resolves to `ProductionRecipe`.
-- `ProductionRecipe.output` adds `1 grain` to `Inventory.grain`.
+- `Building(type, size, currentStaff, recipeType)` resolves to `ProductionRecipe` through `RECIPE_BY_TYPE`.
+- Building creation uses `DEFAULT_RECIPE_BY_BUILDING_TYPE` and recipe switching is bounded by `AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE`.
+- Recipe change resets `currentRecipeWorkProgress` to `0`.
 - `Building.size` drives staffing capacity (`maxStaff`) through `calculateMaxStaff(type, size)`.
 - Manual staffing can be set from `0` up to `maxStaff`.
 - Decreasing size does not auto-reduce `currentStaff`, so `currentStaff` may be above `maxStaff` temporarily.
+- Recipe execution consumes required inputs at cycle start, then adds outputs at cycle completion.
+- Recipes may require multiple input resources (for example cake requires flour and sugar).
 - `GameLoopState.money` starts at `1000` and does not change in the baseline tick flow.
 
-Important current constraint:
+Important current constraints:
 
-- `size` and `currentStaff` are not yet production multipliers. Output still comes only from recipe output values.
+- `size` and `currentStaff` do not directly multiply output amount; they influence effective work and completion speed.
+- Current food chain includes a `sugar` requirement for cake, but there is no in-chain `sugar` producer yet.
 
 Prestige or progression event sources may be inventoried separately when that subsystem is implemented (e.g. under `docs/superpowers/completed/`).
 
@@ -48,17 +52,24 @@ When adding a new variable, update this map **and** `CONTEXT.md` in the same cha
 
 ```mermaid
 flowchart LR
-  BLD["Building"] --> RCP["Recipe"]
-  RCP --> PROD["Production output"]
-  PROD --> INV["Inventory"]
+  BLD["Building\n(type,size,staff,recipeType)"] --> RCP["Recipe"]
+  INV["Inventory"] --> INCHK["Input check\n(single or multi-input)"]
+  RCP --> INCHK
+  INCHK -->|has input| START["Consume input(s) at cycle start"]
+  INCHK -->|missing input| BLOCK["No cycle start"]
+  START --> WORK["Accumulate recipe work progress"]
+  WORK --> DONE["Cycle completion"]
+  DONE --> OUT["Add output resource"]
+  OUT --> INV
 ```
 
 Current meaning:
 
 - Building selects recipe execution context.
-- Recipe defines output resource and amount.
-- Production applies recipe output per tick.
-- Inventory is the persisted sink for produced resources.
+- Recipe defines required inputs, output resource, and work required.
+- Inventory provides required inputs when a cycle starts.
+- Output is added only when recipe work reaches completion.
+- Inventory is the persisted sink and source for recipe chaining.
 
 ### 3.2 Expanded target loop (template)
 
@@ -134,13 +145,47 @@ flowchart LR
   BT["Building type"] --> BS["Building size"]
   BS --> SR["Staff requirements / bounds\nmin workers, max staff"]
   SR --> CS["Current staff"]
-  BT --> RCP["Recipe"]
-  RCP --> PROD["Production"]
+  BT --> AR["Available recipe types"]
+  BT --> DR["Default recipe type"]
+  AR --> RCP["Active recipe"]
+  DR --> RCP
+  RCP --> RI["Recipe input requirements"]
+  RI --> INV["Inventory"]
+  INV --> STARTCHK["Can start cycle?"]
+  STARTCHK --> PROG["Recipe work progress"]
+  PROG --> PROD["Production output"]
+  PROD --> INV
 ```
 
 Current implementation note:
 
-- Staff and size currently define staffing bounds, but they do not yet modify production output.
+- Staff and size define staffing bounds and influence effective work speed through efficiency.
+
+### 6.0.1 First recipe chain: Food (implemented baseline)
+
+```mermaid
+flowchart LR
+  FARM["Farm"] --> GRAIN_R["Grow Grain"]
+  FARM --> CANE_R["Grow Sugarcain"]
+
+  GRAIN_R --> GRAIN_I["Inventory.grain"]
+  CANE_R --> CANE_I["Inventory.sugarcain"]
+
+  GRAIN_I --> MILL_R["Mill: Produce Flour"]
+  MILL_R --> FLOUR_I["Inventory.flour"]
+
+  FLOUR_I --> BREAD_R["Bakery: Bake Bread"]
+  BREAD_R --> BREAD_I["Inventory.bread"]
+
+  FLOUR_I --> CAKE_R["Bakery: Bake Cake"]
+  SUGAR_I["Inventory.sugar\n(external source for now)"] --> CAKE_R
+  CAKE_R --> CAKE_I["Inventory.cake"]
+```
+
+Food chain note:
+
+- Bread path is fully in-chain: `grain -> flour -> bread`.
+- Cake path is partially in-chain: `flour` is produced internally, `sugar` is currently external.
 
 ### 6.1 Site, Resource, and First Boundary Identity
 

@@ -8,6 +8,10 @@ export const INITIAL_GAME_LOOP_STATE: GameLoopState = {
   inventory: {
     grain: 0,
     flour: 0,
+    sugarcain: 0,
+    sugar: 0,
+    bread: 0,
+    cake: 0,
   },
   buildings: [],
 };

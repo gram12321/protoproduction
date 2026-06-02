@@ -1,7 +1,22 @@
 import { RECIPE_BY_TYPE } from "@/lib/constants";
-import type { Building, Inventory } from "@/lib/types";
+import type { Building, Inventory, RecipeInput } from "@/lib/types";
 import { updateBuildingEfficiency } from "./buildingEfficiency";
 import { calculateEffectiveBuildingWorkPerTick } from "./buildingWork";
+
+function hasRequiredInputs(
+  inventory: Inventory,
+  requiredInputs: RecipeInput[],
+): boolean {
+  return requiredInputs.every(
+    (requiredInput) => inventory[requiredInput.resource] >= requiredInput.amount,
+  );
+}
+
+function consumeInputs(inventory: Inventory, requiredInputs: RecipeInput[]): void {
+  for (const requiredInput of requiredInputs) {
+    inventory[requiredInput.resource] -= requiredInput.amount;
+  }
+}
 
 export interface ProcessBuildingTickResult {
   nextBuilding: Building;
@@ -28,17 +43,15 @@ export function processBuildingTick(
   );
   const safeWorkRequired = Math.max(recipe.workRequired, Number.EPSILON);
   const nextInventory = { ...inventory };
-
   let remainingWork = Math.max(0, effectiveWorkThisTick);
   let remainingWorkProgress = previousWorkProgress;
   let completedRecipeCount = 0;
 
-  if (recipe.input && remainingWorkProgress === 0 && remainingWork > 0) {
-    const hasStartingInput =
-      nextInventory[recipe.input.resource] >= recipe.input.amount;
+  if (recipe.input?.length && remainingWorkProgress === 0 && remainingWork > 0) {
+    const hasStartingInput = hasRequiredInputs(nextInventory, recipe.input);
 
     if (hasStartingInput) {
-      nextInventory[recipe.input.resource] -= recipe.input.amount;
+      consumeInputs(nextInventory, recipe.input);
     } else {
       remainingWork = 0;
     }
@@ -55,12 +68,11 @@ export function processBuildingTick(
       completedRecipeCount += 1;
       remainingWorkProgress = 0;
 
-      if (recipe.input && remainingWork > 0) {
-        const hasInputForNextCycle =
-          nextInventory[recipe.input.resource] >= recipe.input.amount;
+      if (recipe.input?.length && remainingWork > 0) {
+        const hasInputForNextCycle = hasRequiredInputs(nextInventory, recipe.input);
 
         if (hasInputForNextCycle) {
-          nextInventory[recipe.input.resource] -= recipe.input.amount;
+          consumeInputs(nextInventory, recipe.input);
         } else {
           break;
         }

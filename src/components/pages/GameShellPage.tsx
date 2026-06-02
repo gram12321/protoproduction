@@ -7,17 +7,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui";
-import { RECIPE_BY_TYPE } from "@/lib/constants";
-import type { BuildingType } from "@/lib/types";
+import {
+  AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE,
+  RECIPE_BY_TYPE,
+} from "@/lib/constants";
+import type { BuildingType, RecipeType } from "@/lib/types";
 import {
   calculateMaxStaff,
   calculateEffectiveBuildingWorkPerTick,
+  canStartRecipeFromInventory,
   createBuilding,
   createInitialGameLoopState,
   decreaseBuildingSize,
+  formatRecipeInputRequirements,
   getMinimumWorkersForBuildingType,
   increaseBuildingSize,
   processGameTick,
+  setBuildingRecipeType,
   setBuildingStaff,
 } from "@/lib/services";
 
@@ -64,12 +70,11 @@ export function GameShellPage() {
                 Smallest game loop
               </p>
               <h1 className="text-4xl font-semibold tracking-normal text-balance sm:text-5xl">
-                Build farms and mills in a small production chain.
+                Build farms, food processing factories, and bakeries.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-                This baseline has one resource type, one building type, one recipe,
-                and one inventory where production is stored. Buildings now also
-                have a size and staffing capacity.
+                Recipe chains now support multiple building types and ingredient
+                requirements across production steps.
               </p>
             </div>
 
@@ -84,7 +89,8 @@ export function GameShellPage() {
                 aria-label="Building type"
               >
                 <option value="farm">Farm</option>
-                <option value="mill">Mill</option>
+                <option value="foodprocessingfactory">Food processing factory</option>
+                <option value="bakery">Bakery</option>
               </select>
               <Button size="lg" variant="outline" onClick={handleCreateBuilding}>
                 Build building
@@ -98,12 +104,15 @@ export function GameShellPage() {
               {gameState.buildings.map((building) => {
                 const maxStaff = calculateMaxStaff(building.type, building.size);
                 const recipe = RECIPE_BY_TYPE[building.recipeType];
+                const availableRecipeTypes =
+                  AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE[building.type];
                 const effectiveWorkThisTick =
                   calculateEffectiveBuildingWorkPerTick(building);
-                const canStartRecipe =
-                  !recipe.input ||
-                  building.currentRecipeWorkProgress > 0 ||
-                  gameState.inventory[recipe.input.resource] >= recipe.input.amount;
+                const canStartRecipe = canStartRecipeFromInventory(
+                  building,
+                  recipe,
+                  gameState.inventory,
+                );
 
                 return (
                   <Card key={building.id}>
@@ -116,6 +125,33 @@ export function GameShellPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm leading-6">
+                      <label
+                        htmlFor={`recipe-select-${building.id}`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        Recipe
+                      </label>
+                      <select
+                        id={`recipe-select-${building.id}`}
+                        value={building.recipeType}
+                        onChange={(event) =>
+                          setGameState((previousState) =>
+                            setBuildingRecipeType(
+                              previousState,
+                              building.id,
+                              event.target.value as RecipeType,
+                            ),
+                          )
+                        }
+                        className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                        aria-label={`Recipe for ${building.id}`}
+                      >
+                        {availableRecipeTypes.map((recipeType) => (
+                          <option key={recipeType} value={recipeType}>
+                            {RECIPE_BY_TYPE[recipeType].name}
+                          </option>
+                        ))}
+                      </select>
                       <p>Building size: {building.size}</p>
                       <p>
                         Min workers: {getMinimumWorkersForBuildingType(building.type)}
@@ -134,9 +170,9 @@ export function GameShellPage() {
                       <p>
                         Current recipe work progress: {building.currentRecipeWorkProgress.toFixed(3)}
                       </p>
-                      {!canStartRecipe && recipe.input && (
+                      {!canStartRecipe && recipe.input?.length && (
                         <p className="text-xs font-medium text-destructive">
-                          Cannot start production: need {recipe.input.amount} {recipe.input.resource}.
+                          Cannot start production: need {formatRecipeInputRequirements(recipe)}.
                         </p>
                       )}
 
@@ -197,6 +233,10 @@ export function GameShellPage() {
               <p>Buildings count: {gameState.buildings.length}</p>
               <p>Grain in inventory: {gameState.inventory.grain}</p>
               <p>Flour in inventory: {gameState.inventory.flour}</p>
+              <p>Sugarcain in inventory: {gameState.inventory.sugarcain}</p>
+              <p>Sugar in inventory: {gameState.inventory.sugar}</p>
+              <p>Bread in inventory: {gameState.inventory.bread}</p>
+              <p>Cake in inventory: {gameState.inventory.cake}</p>
             </CardContent>
           </Card>
         </section>
