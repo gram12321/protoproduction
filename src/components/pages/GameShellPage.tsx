@@ -15,7 +15,7 @@ import {
   RECIPE_BY_TYPE,
 } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
-import type { BuildingType, CityType, RecipeType } from "@/lib/types";
+import type { BuildingType, CityType, RecipeType, ResourceType } from "@/lib/types";
 import {
   calculateMaxStaff,
   calculateEffectiveBuildingWorkPerTick,
@@ -37,9 +37,34 @@ function formatLocationName(value: string): string {
 
 export function GameShellPage() {
   const [gameState, setGameState] = useState(createInitialGameLoopState);
+  const [marketplaceCity, setMarketplaceCity] = useState<CityType>(CITY_TYPES[0]);
+  const [listedQuantityByResource, setListedQuantityByResource] =
+    useState<Partial<Record<ResourceType, number>>>({});
+  const [offerPriceByResource, setOfferPriceByResource] =
+    useState<Partial<Record<ResourceType, number>>>({});
   const [selectedBuildingType, setSelectedBuildingType] =
     useState<BuildingType>("farm");
   const [selectedCity, setSelectedCity] = useState<CityType | "">("");
+
+  function handleListedQuantityChange(
+    resource: ResourceType,
+    value: number | undefined,
+  ) {
+    setListedQuantityByResource((previousState) => ({
+      ...previousState,
+      [resource]: value,
+    }));
+  }
+
+  function handleOfferPriceChange(
+    resource: ResourceType,
+    value: number | undefined,
+  ) {
+    setOfferPriceByResource((previousState) => ({
+      ...previousState,
+      [resource]: value,
+    }));
+  }
 
   function handleStaffChange(buildingId: string, requestedStaff: number) {
     setGameState((previousState) =>
@@ -48,7 +73,14 @@ export function GameShellPage() {
   }
 
   function handleRunTick() {
-    setGameState((previousState) => processGameTick(previousState));
+    setGameState((previousState) =>
+      processGameTick(
+        previousState,
+        marketplaceCity,
+        listedQuantityByResource,
+        offerPriceByResource,
+      ),
+    );
   }
 
   function handleCreateBuilding() {
@@ -291,7 +323,16 @@ export function GameShellPage() {
           </div>
 
           <div className="space-y-6">
-            <CityMarketplaceCard />
+            <CityMarketplaceCard
+              inventory={gameState.inventory}
+              lastMarketplaceTick={gameState.lastMarketplaceTick}
+              selectedCity={marketplaceCity}
+              sellQuantityByResource={listedQuantityByResource}
+              offerPriceByResource={offerPriceByResource}
+              onSelectedCityChange={setMarketplaceCity}
+              onSellQuantityChange={handleListedQuantityChange}
+              onOfferPriceChange={handleOfferPriceChange}
+            />
 
             <Card>
               <CardHeader>

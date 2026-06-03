@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   CITY_DATA,
   CITY_TYPES,
@@ -9,7 +8,12 @@ import {
   calculateBaseCityPriceByResource,
   calculateBaseResourceCostByResource,
 } from "@/lib/services";
-import type { CityType, ResourceType } from "@/lib/types";
+import type {
+  CityType,
+  Inventory,
+  MarketplaceTickResult,
+  ResourceType,
+} from "@/lib/types";
 import { formatNumber } from "@/lib/utils";
 import {
   Card,
@@ -32,9 +36,27 @@ function formatLocationName(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-export function CityMarketplaceCard() {
-  const [selectedCity, setSelectedCity] = useState<CityType>(CITY_TYPES[0]);
+interface CityMarketplaceCardProps {
+  inventory: Inventory;
+  lastMarketplaceTick: MarketplaceTickResult | null;
+  selectedCity: CityType;
+  sellQuantityByResource: Partial<Record<ResourceType, number>>;
+  offerPriceByResource: Partial<Record<ResourceType, number>>;
+  onSelectedCityChange: (city: CityType) => void;
+  onSellQuantityChange: (resource: ResourceType, value: number | undefined) => void;
+  onOfferPriceChange: (resource: ResourceType, value: number | undefined) => void;
+}
 
+export function CityMarketplaceCard({
+  inventory,
+  lastMarketplaceTick,
+  selectedCity,
+  sellQuantityByResource,
+  offerPriceByResource,
+  onSelectedCityChange,
+  onSellQuantityChange,
+  onOfferPriceChange,
+}: CityMarketplaceCardProps) {
   const baseDemandByResource = calculateBaseCityDemandByResource(selectedCity);
   const baseResourceCostByResource = calculateBaseResourceCostByResource();
   const baseCityPriceByResource = calculateBaseCityPriceByResource(selectedCity);
@@ -61,7 +83,7 @@ export function CityMarketplaceCard() {
             id="marketplace-city-select"
             aria-label="Marketplace city"
             value={selectedCity}
-            onChange={(event) => setSelectedCity(event.target.value as CityType)}
+            onChange={(event) => onSelectedCityChange(event.target.value as CityType)}
             className="sm:max-w-[220px]"
           >
             {CITY_TYPES.map((city) => (
@@ -82,6 +104,9 @@ export function CityMarketplaceCard() {
                 <TableHead className="text-right">Base cost</TableHead>
                 <TableHead className="text-right">Base city price</TableHead>
                 <TableHead className="text-right">Base city demand</TableHead>
+                <TableHead className="text-right">Inventory</TableHead>
+                <TableHead className="text-right">Sell qty</TableHead>
+                <TableHead className="text-right">Offer price</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -105,6 +130,42 @@ export function CityMarketplaceCard() {
                       baseDemandByResource[resource as ResourceType],
                     )}
                   </TableCell>
+                  <TableCell className="text-right">
+                    {formatNumber(inventory[resource as ResourceType])}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <input
+                      type="number"
+                      min={0}
+                      aria-label={`Sell quantity for ${resource}`}
+                      value={sellQuantityByResource[resource as ResourceType] ?? ""}
+                      onChange={(e) =>
+                        onSellQuantityChange(
+                          resource as ResourceType,
+                          e.target.value === "" ? undefined : Number(e.target.value),
+                        )
+                      }
+                      className="w-20 rounded border border-input bg-background px-2 py-1 text-right text-sm"
+                      placeholder="0"
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      aria-label={`Offer price for ${resource}`}
+                      value={offerPriceByResource[resource as ResourceType] ?? ""}
+                      onChange={(e) =>
+                        onOfferPriceChange(
+                          resource as ResourceType,
+                          e.target.value === "" ? undefined : Number(e.target.value),
+                        )
+                      }
+                      className="w-24 rounded border border-input bg-background px-2 py-1 text-right text-sm"
+                      placeholder="0.00"
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -118,6 +179,58 @@ export function CityMarketplaceCard() {
             forceDecimals: true,
           })}
         </p>
+        <p className="text-sm text-muted-foreground">
+          Listed stock sells on each tick against Local Suppliers. Any unmet demand stays with Local Suppliers.
+        </p>
+
+        {lastMarketplaceTick && lastMarketplaceTick.city === selectedCity && (
+          <div className="space-y-3 rounded-md border p-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold">Previous tick offer results</h3>
+              <p className="text-sm text-muted-foreground">
+                Offers resolved in {formatLocationName(lastMarketplaceTick.city)}.
+              </p>
+            </div>
+
+            {lastMarketplaceTick.resources.map((resourceResult) => (
+              <div key={resourceResult.resource} className="space-y-2">
+                <p className="text-sm font-medium capitalize">
+                  {resourceResult.resource} | Demand: {formatNumber(resourceResult.baseDemand)}
+                </p>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Seller</TableHead>
+                        <TableHead className="text-right">Offered qty</TableHead>
+                        <TableHead className="text-right">Offer price</TableHead>
+                        <TableHead className="text-right">Sold</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {resourceResult.offers.map((offer) => (
+                        <TableRow key={`${resourceResult.resource}-${offer.sellerName}`}>
+                          <TableCell>{offer.sellerName}</TableCell>
+                          <TableCell className="text-right">
+                            {offer.offeredQuantity === null
+                              ? "Infinity"
+                              : formatNumber(offer.offeredQuantity)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber(offer.offerPrice)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber(offer.soldQuantity)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

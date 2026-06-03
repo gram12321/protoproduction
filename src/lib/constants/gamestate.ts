@@ -15,4 +15,5 @@ export const INITIAL_GAME_LOOP_STATE: GameLoopState = {
     cake: 0,
   },
   buildings: [],
+  lastMarketplaceTick: null,
 };

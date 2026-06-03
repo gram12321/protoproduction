@@ -133,6 +133,33 @@ describe("App", () => {
     expect(screen.getByText(/flour in inventory:\s*[1-9]/i)).toBeInTheDocument();
   });
 
+  it("sells listed stock against local suppliers on tick", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    fireEvent.change(screen.getByLabelText(/building city/i), {
+      target: { value: "copenhagen" },
+    });
+    await user.click(screen.getByRole("button", { name: /build building/i }));
+    await user.click(screen.getByRole("button", { name: /run 1 tick/i }));
+
+    fireEvent.change(screen.getByLabelText(/sell quantity for grain/i), {
+      target: { value: "1" },
+    });
+    fireEvent.change(screen.getByLabelText(/offer price for grain/i), {
+      target: { value: "38.6" },
+    });
+
+    await user.click(screen.getByRole("button", { name: /run 1 tick/i }));
+
+    expect(screen.getByText(/money:\s*€1,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/previous tick offer results/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/local suppliers/i)).toHaveLength(2);
+    expect(screen.getByRole("cell", { name: /player/i })).toBeInTheDocument();
+    expect(screen.getByText(/infinity/i)).toBeInTheDocument();
+  });
+
   it("supports bakery recipes and cake requirements", async () => {
     const user = userEvent.setup();
 

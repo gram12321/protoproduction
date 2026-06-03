@@ -1,4 +1,10 @@
-import { calculateBaseCityDemand, calculateBaseCityDemandByResource } from "@/lib/services";
+import {
+  calculateBaseCityDemand,
+  calculateBaseCityDemandByResource,
+  calculateBaseCityPrice,
+  resolveCityMarketplaceTick,
+} from "@/lib/services";
+import { INITIAL_GAME_LOOP_STATE } from "@/lib/constants";
 
 describe("marketplace demand", () => {
   it("calculates base city demand from city population, wealth, and base consumption", () => {
@@ -18,5 +24,61 @@ describe("marketplace demand", () => {
       bread: 84.5,
       cake: 42.25,
     });
+  });
+
+  it("splits demand with local suppliers when the player matches base city price", () => {
+    const baseCityPrice = calculateBaseCityPrice("grain", "copenhagen");
+    const result = resolveCityMarketplaceTick(
+      {
+        ...INITIAL_GAME_LOOP_STATE.inventory,
+        grain: 1,
+      },
+      "copenhagen",
+      { grain: 1 },
+      { grain: baseCityPrice },
+    );
+
+    expect(result.nextInventory.grain).toBe(1);
+    expect(result.earnedMoney).toBe(0);
+    expect(result.marketplaceTickResult).toEqual({
+      city: "copenhagen",
+      resources: [
+        {
+          resource: "grain",
+          baseDemand: calculateBaseCityDemand("copenhagen", "grain"),
+          offers: [
+            {
+              sellerName: "Player",
+              offeredQuantity: 1,
+              offerPrice: baseCityPrice,
+              soldQuantity: 0,
+            },
+            {
+              sellerName: "Local Suppliers",
+              offeredQuantity: null,
+              offerPrice: baseCityPrice,
+              soldQuantity: 0,
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("caps player sales by listed quantity and available inventory in whole units", () => {
+    const result = resolveCityMarketplaceTick(
+      {
+        ...INITIAL_GAME_LOOP_STATE.inventory,
+        bread: 2,
+      },
+      "copenhagen",
+      { bread: 1 },
+      { bread: 1 },
+    );
+
+    expect(result.nextInventory.bread).toBe(1);
+    expect(result.earnedMoney).toBe(1);
+    expect(result.marketplaceTickResult?.resources[0]?.offers[0]?.soldQuantity).toBe(1);
+    expect(result.marketplaceTickResult?.resources[0]?.offers[1]?.soldQuantity).toBe(5);
   });
 });
