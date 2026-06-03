@@ -16,4 +16,5 @@ export const INITIAL_GAME_LOOP_STATE: GameLoopState = {
   },
   buildings: [],
   lastMarketplaceTick: null,
+  marketplaceTickHistory: [],
 };

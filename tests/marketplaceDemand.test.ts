@@ -2,6 +2,7 @@ import {
   calculateBaseCityDemand,
   calculateBaseCityDemandByResource,
   calculateBaseCityPrice,
+  resolveNpcRetailOffers,
   resolveCityMarketplaceTick,
 } from "@/lib/services";
 import { INITIAL_GAME_LOOP_STATE } from "@/lib/constants";
@@ -44,36 +45,16 @@ describe("marketplace demand", () => {
 
     expect(result.nextInventory.grain).toBe(1);
     expect(result.earnedMoney).toBe(0);
-    expect(result.marketplaceTickResult).toEqual({
-      city: "copenhagen",
-      resources: [
-        {
-          resource: "grain",
-          baseDemand: calculateBaseCityDemand("copenhagen", "grain"),
-          demandShock: null,
-          offers: [
-            {
-              sellerName: "Player",
-              offeredQuantity: 1,
-              offerPrice: baseCityPrice,
-              soldQuantity: 0,
-            },
-            {
-              sellerName: "Average NPC",
-              offeredQuantity: 0,
-              offerPrice: baseCityPrice,
-              soldQuantity: 0,
-            },
-            {
-              sellerName: "Local Suppliers",
-              offeredQuantity: null,
-              offerPrice: baseCityPrice,
-              soldQuantity: 0,
-            },
-          ],
-        },
-      ],
-    });
+    const offers = result.marketplaceTickResult?.resources[0]?.offers;
+    const averageNpcOffer = offers?.find((offer) => offer.sellerName === "Average NPC");
+    const followerNpcOffer = offers?.find((offer) => offer.sellerName === "Follower NPC");
+    const localSupplierOffer = offers?.find((offer) => offer.sellerName === "Local Suppliers");
+
+    expect(averageNpcOffer?.offeredQuantity).toBe(0);
+    expect(averageNpcOffer?.offerPrice).toBe(baseCityPrice);
+    expect(followerNpcOffer?.offeredQuantity).toBe(1);
+    expect(followerNpcOffer?.offerPrice).toBe(baseCityPrice);
+    expect(localSupplierOffer?.offerPrice).toBe(baseCityPrice);
   });
 
   it("caps player sales by listed quantity and available inventory in whole units", () => {
@@ -91,9 +72,14 @@ describe("marketplace demand", () => {
 
     expect(result.nextInventory.bread).toBe(1);
     expect(result.earnedMoney).toBe(1);
-    expect(result.marketplaceTickResult?.resources[0]?.offers[0]?.soldQuantity).toBe(1);
-    expect(result.marketplaceTickResult?.resources[0]?.offers[1]?.soldQuantity).toBe(1);
-    expect(result.marketplaceTickResult?.resources[0]?.offers[2]?.soldQuantity).toBe(5);
+    const offers = result.marketplaceTickResult?.resources[0]?.offers;
+    const playerOffer = offers?.find((offer) => offer.sellerName === "Player");
+    const nonPlayerSoldQuantity = offers?.filter(
+      (offer) => offer.sellerName !== "Player",
+    ).reduce((sum, offer) => sum + offer.soldQuantity, 0);
+
+    expect(playerOffer?.soldQuantity).toBe(1);
+    expect(nonPlayerSoldQuantity).toBe(6);
   });
 
   it("reacts more strongly to cheap price for high-sensitivity resources", () => {
@@ -289,5 +275,262 @@ describe("marketplace demand", () => {
     expect(breadResult?.demandShock).not.toBeNull();
     expect(breadResult?.demandShock?.sellerName).toBe("Player");
     expect(breadResult?.demandShock?.multiplier).toBe(0.85);
+  });
+
+  it("caps Average NPC offer price at base city price", () => {
+    const baseCityPrice = calculateBaseCityPrice("bread", "copenhagen");
+    const lastTickPlayerPrice = baseCityPrice * 3;
+    const offers = resolveNpcRetailOffers(
+      "bread",
+      calculateBaseCityDemand("copenhagen", "bread"),
+      baseCityPrice,
+      {
+        city: "copenhagen",
+        resources: [
+          {
+            resource: "bread",
+            baseDemand: calculateBaseCityDemand("copenhagen", "bread"),
+            demandShock: null,
+            offers: [
+              {
+                sellerName: "Player",
+                offeredQuantity: 1,
+                offerPrice: lastTickPlayerPrice,
+                soldQuantity: 1,
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    expect(offers[0]?.sellerName).toBe("Average NPC");
+    expect(offers[0]?.offerPrice).toBe(baseCityPrice);
+  });
+
+  it("supports multiple NPC strategies in offer resolution", () => {
+    const offers = resolveNpcRetailOffers(
+      "bread",
+      10,
+      100,
+      null,
+      {
+        strategies: [
+          {
+            sellerName: "Average NPC",
+            calculateOfferPrice: () => 90,
+            calculateOfferedQuantity: () => 2,
+          },
+          {
+            sellerName: "Value NPC",
+            calculateOfferPrice: () => 80,
+            calculateOfferedQuantity: () => 3,
+          },
+        ],
+      },
+    );
+
+    expect(offers).toEqual([
+      {
+        sellerName: "Average NPC",
+        offerPrice: 90,
+        offeredQuantity: 2,
+      },
+      {
+        sellerName: "Value NPC",
+        offerPrice: 80,
+        offeredQuantity: 3,
+      },
+    ]);
+  });
+
+  it("sets Follower NPC quantity from last tick player sold quantity", () => {
+    const offers = resolveNpcRetailOffers(
+      "bread",
+      calculateBaseCityDemand("copenhagen", "bread"),
+      calculateBaseCityPrice("bread", "copenhagen"),
+      {
+        city: "copenhagen",
+        resources: [
+          {
+            resource: "bread",
+            baseDemand: calculateBaseCityDemand("copenhagen", "bread"),
+            demandShock: null,
+            offers: [
+              {
+                sellerName: "Player",
+                offeredQuantity: 10,
+                offerPrice: 100,
+                soldQuantity: 7,
+              },
+              {
+                sellerName: "Follower NPC",
+                offeredQuantity: 5,
+                offerPrice: 100,
+                soldQuantity: 1,
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    const followerNpcOffer = offers.find((offer) => offer.sellerName === "Follower NPC");
+    expect(followerNpcOffer?.offeredQuantity).toBe(7);
+  });
+
+  it("decreases Follower NPC price when its sell-through was below 10 percent", () => {
+    const offers = resolveNpcRetailOffers(
+      "bread",
+      calculateBaseCityDemand("copenhagen", "bread"),
+      calculateBaseCityPrice("bread", "copenhagen"),
+      {
+        city: "copenhagen",
+        resources: [
+          {
+            resource: "bread",
+            baseDemand: calculateBaseCityDemand("copenhagen", "bread"),
+            demandShock: null,
+            offers: [
+              {
+                sellerName: "Player",
+                offeredQuantity: 10,
+                offerPrice: 100,
+                soldQuantity: 5,
+              },
+              {
+                sellerName: "Follower NPC",
+                offeredQuantity: 10,
+                offerPrice: 100,
+                soldQuantity: 0,
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    const followerNpcOffer = offers.find((offer) => offer.sellerName === "Follower NPC");
+    expect(followerNpcOffer?.offerPrice).toBeCloseTo(95);
+  });
+
+  it("increases Follower NPC price when its sell-through was above 10 percent", () => {
+    const offers = resolveNpcRetailOffers(
+      "bread",
+      calculateBaseCityDemand("copenhagen", "bread"),
+      calculateBaseCityPrice("bread", "copenhagen"),
+      {
+        city: "copenhagen",
+        resources: [
+          {
+            resource: "bread",
+            baseDemand: calculateBaseCityDemand("copenhagen", "bread"),
+            demandShock: null,
+            offers: [
+              {
+                sellerName: "Player",
+                offeredQuantity: 10,
+                offerPrice: 100,
+                soldQuantity: 5,
+              },
+              {
+                sellerName: "Follower NPC",
+                offeredQuantity: 10,
+                offerPrice: 100,
+                soldQuantity: 2,
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    const followerNpcOffer = offers.find((offer) => offer.sellerName === "Follower NPC");
+    expect(followerNpcOffer?.offerPrice).toBeCloseTo(105);
+  });
+
+  it("applies Follower NPC minimum quantity floor when player has no recent sales", () => {
+    const offers = resolveNpcRetailOffers(
+      "bread",
+      calculateBaseCityDemand("copenhagen", "bread"),
+      calculateBaseCityPrice("bread", "copenhagen"),
+      null,
+    );
+
+    const followerNpcOffer = offers.find((offer) => offer.sellerName === "Follower NPC");
+    expect(followerNpcOffer?.offeredQuantity).toBe(1);
+  });
+
+  it("smooths Follower NPC quantity and base price over recent tick history", () => {
+    const offers = resolveNpcRetailOffers(
+      "bread",
+      calculateBaseCityDemand("copenhagen", "bread"),
+      calculateBaseCityPrice("bread", "copenhagen"),
+      null,
+      {
+        lastMarketplaceTicks: [
+          {
+            city: "copenhagen",
+            resources: [
+              {
+                resource: "bread",
+                baseDemand: 6,
+                demandShock: null,
+                offers: [
+                  { sellerName: "Player", offeredQuantity: 10, offerPrice: 120, soldQuantity: 8 },
+                  { sellerName: "Follower NPC", offeredQuantity: 10, offerPrice: 120, soldQuantity: 0 },
+                ],
+              },
+            ],
+          },
+          {
+            city: "copenhagen",
+            resources: [
+              {
+                resource: "bread",
+                baseDemand: 6,
+                demandShock: null,
+                offers: [
+                  { sellerName: "Player", offeredQuantity: 10, offerPrice: 100, soldQuantity: 6 },
+                  { sellerName: "Follower NPC", offeredQuantity: 10, offerPrice: 100, soldQuantity: 0 },
+                ],
+              },
+            ],
+          },
+          {
+            city: "copenhagen",
+            resources: [
+              {
+                resource: "bread",
+                baseDemand: 6,
+                demandShock: null,
+                offers: [
+                  { sellerName: "Player", offeredQuantity: 10, offerPrice: 80, soldQuantity: 4 },
+                  { sellerName: "Follower NPC", offeredQuantity: 10, offerPrice: 80, soldQuantity: 2 },
+                ],
+              },
+            ],
+          },
+          {
+            city: "copenhagen",
+            resources: [
+              {
+                resource: "bread",
+                baseDemand: 6,
+                demandShock: null,
+                offers: [
+                  { sellerName: "Player", offeredQuantity: 10, offerPrice: 100, soldQuantity: 2 },
+                  { sellerName: "Follower NPC", offeredQuantity: 10, offerPrice: 100, soldQuantity: 2 },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    const followerNpcOffer = offers.find((offer) => offer.sellerName === "Follower NPC");
+    expect(followerNpcOffer?.offeredQuantity).toBe(5);
+    expect(followerNpcOffer?.offerPrice).toBeCloseTo(100);
   });
 });

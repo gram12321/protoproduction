@@ -1,13 +1,15 @@
 import {
-  AVERAGE_NPC_DEMAND_SHARE,
   BASE_CONSUMPTION_BY_RESOURCE,
   CROSS_LEVEL_ELASTICITY,
   DEMAND_CREATION_DAMPENING,
   DEMAND_CREATION_MAX_ADDITIONAL_MULTIPLIER,
   DEMAND_CREATION_SENSITIVITY_MULTIPLIER,
   DEMAND_SHOCK_CHANCE,
+  DEMAND_SHOCK_NEGATIVE_OUTCOME_CHANCE,
   DEMAND_SHOCK_NEGATIVE_MULTIPLIER,
   DEMAND_SHOCK_POSITIVE_MULTIPLIER,
+  SELLER_WEIGHT_RANDOMIZATION_MIN,
+  SELLER_WEIGHT_RANDOMIZATION_RANGE,
   CITY_DATA,
   INTER_RETAILER_SENSITIVITY,
   RESOURCE_MARKET_LEVEL_BY_RESOURCE,
@@ -21,6 +23,12 @@ import type {
   MarketplaceTickResult,
   ResourceType,
 } from "@/lib/types";
+import {
+  LOCAL_SUPPLIERS_SELLER_NAME,
+  PLAYER_SELLER_NAME,
+  resolveNpcRetailOffers,
+  type NpcRetailOffer,
+} from "./npcRetailers";
 import { calculateBaseCityPrice } from "./resourceBaseCost";
 
 export function calculateBaseCityDemand(
@@ -56,20 +64,6 @@ function calculatePriceWeight(
   return Math.pow(safeAverageSellerPrice / safePrice, sensitivity);
 }
 
-function findLastTickPlayerOfferPrice(
-  lastMarketplaceTick: MarketplaceTickResult | null | undefined,
-  resource: ResourceType,
-): number | undefined {
-  const lastResourceResult = lastMarketplaceTick?.resources.find(
-    (result) => result.resource === resource,
-  );
-  const playerOffer = lastResourceResult?.offers.find(
-    (offer) => offer.sellerName === "Player",
-  );
-
-  return playerOffer?.offerPrice;
-}
-
 interface ListedResourceMarketContext {
   resource: ResourceType;
   listedQuantity: number;
@@ -77,15 +71,56 @@ interface ListedResourceMarketContext {
   availableInventory: number;
   baseDemand: number;
   baseCityPrice: number;
-  averageNpcPrice: number;
+  npcOffers: NpcRetailOffer[];
   interRetailerSensitivity: number;
 }
 
-type RetailSellerName = "Player" | "Average NPC" | "Local Suppliers";
+type RetailSellerName = string;
+
+interface RetailSellerMarketContext {
+  sellerName: RetailSellerName;
+  offerPrice: number;
+  offeredQuantity: number | null;
+  maxSellUnits: number;
+}
 
 interface DemandShockAdjustment {
   sellerName: RetailSellerName;
   multiplier: number;
+}
+
+function calculateAverageSellerPrice(prices: number[]): number {
+  if (prices.length === 0) {
+    return 0;
+  }
+
+  const totalPrice = prices.reduce((sum, price) => sum + price, 0);
+  return totalPrice / prices.length;
+}
+
+function buildRetailSellerContexts(
+  context: ListedResourceMarketContext,
+): RetailSellerMarketContext[] {
+  return [
+    {
+      sellerName: PLAYER_SELLER_NAME,
+      offerPrice: context.playerOfferPrice,
+      offeredQuantity: context.listedQuantity,
+      maxSellUnits: Math.min(context.listedQuantity, context.availableInventory),
+    },
+    ...context.npcOffers.map((npcOffer) => ({
+      sellerName: npcOffer.sellerName,
+      offerPrice: npcOffer.offerPrice,
+      offeredQuantity: npcOffer.offeredQuantity,
+      maxSellUnits: npcOffer.offeredQuantity,
+    })),
+    {
+      sellerName: LOCAL_SUPPLIERS_SELLER_NAME,
+      offerPrice: context.baseCityPrice,
+      offeredQuantity: null,
+      maxSellUnits: Number.POSITIVE_INFINITY,
+    },
+  ];
 }
 
 function buildListedResourceContexts(
@@ -94,6 +129,7 @@ function buildListedResourceContexts(
   listedQuantityByResource: Partial<Record<ResourceType, number>>,
   offerPriceByResource: Partial<Record<ResourceType, number>>,
   lastMarketplaceTick?: MarketplaceTickResult | null,
+  marketplaceTickHistory?: MarketplaceTickResult[],
 ): ListedResourceMarketContext[] {
   const resourceContexts: ListedResourceMarketContext[] = [];
 
@@ -112,14 +148,15 @@ function buildListedResourceContexts(
 
     const baseDemand = calculateBaseCityDemand(city, resource);
     const baseCityPrice = calculateBaseCityPrice(resource, city);
-    const lastTickPlayerPrice = findLastTickPlayerOfferPrice(
-      lastMarketplaceTick,
+    const npcOffers = resolveNpcRetailOffers(
       resource,
+      baseDemand,
+      baseCityPrice,
+      lastMarketplaceTick,
+      {
+        lastMarketplaceTicks: marketplaceTickHistory,
+      },
     );
-    const averageNpcPrice =
-      lastTickPlayerPrice !== undefined
-        ? (baseCityPrice + lastTickPlayerPrice) / 2
-        : baseCityPrice;
 
     resourceContexts.push({
       resource,
@@ -128,7 +165,7 @@ function buildListedResourceContexts(
       availableInventory,
       baseDemand,
       baseCityPrice,
-      averageNpcPrice,
+      npcOffers,
       interRetailerSensitivity: INTER_RETAILER_SENSITIVITY[resource],
     });
   }
@@ -143,10 +180,12 @@ function applyCrossResourceSubstitution(
     resourceContexts.map((context) => [context.resource, context.baseDemand]),
   ) as Record<ResourceType, number>;
   const averagePriceByResource = Object.fromEntries(
-    resourceContexts.map((context) => [
-      context.resource,
-      (context.playerOfferPrice + context.averageNpcPrice + context.baseCityPrice) / 3,
-    ]),
+    resourceContexts.map((context) => {
+      const sellerPrices = buildRetailSellerContexts(context).map(
+        (sellerContext) => sellerContext.offerPrice,
+      );
+      return [context.resource, calculateAverageSellerPrice(sellerPrices)];
+    }),
   ) as Record<ResourceType, number>;
   const substitutionGainsByResource = new Map<ResourceType, number>();
   const substitutionLossesByResource = new Map<ResourceType, number>();
@@ -224,18 +263,16 @@ function applyDemandCreationFromBelowAveragePricing(
   return Object.fromEntries(
     resourceContexts.map((context) => {
       const currentDemand = demandByResource[context.resource] ?? 0;
-      const averageSellerPrice =
-        (context.playerOfferPrice + context.averageNpcPrice + context.baseCityPrice) / 3;
+      const sellerContexts = buildRetailSellerContexts(context);
+      const averageSellerPrice = calculateAverageSellerPrice(
+        sellerContexts.map((sellerContext) => sellerContext.offerPrice),
+      );
 
       if (currentDemand <= 0 || averageSellerPrice <= 0) {
         return [context.resource, currentDemand];
       }
 
-      const prices = [
-        context.playerOfferPrice,
-        context.averageNpcPrice,
-        context.baseCityPrice,
-      ];
+      const prices = sellerContexts.map((sellerContext) => sellerContext.offerPrice);
       let totalCreatedDemand = 0;
 
       for (const price of prices) {
@@ -265,11 +302,6 @@ function buildDemandShockAdjustmentsByResource(
   resourceContexts: ListedResourceMarketContext[],
   randomFn: () => number,
 ): Partial<Record<ResourceType, DemandShockAdjustment>> {
-  const sellers: RetailSellerName[] = [
-    "Player",
-    "Average NPC",
-    "Local Suppliers",
-  ];
   const adjustmentsByResource: Partial<Record<ResourceType, DemandShockAdjustment>> = {};
 
   for (const context of resourceContexts) {
@@ -277,8 +309,12 @@ function buildDemandShockAdjustmentsByResource(
       continue;
     }
 
-    const shockedSeller = sellers[Math.floor(randomFn() * sellers.length)] ?? "Player";
-    const multiplier = randomFn() < 0.5
+    const sellers = buildRetailSellerContexts(context).map(
+      (sellerContext) => sellerContext.sellerName,
+    );
+    const shockedSeller = sellers[Math.floor(randomFn() * sellers.length)]
+      ?? PLAYER_SELLER_NAME;
+    const multiplier = randomFn() < DEMAND_SHOCK_NEGATIVE_OUTCOME_CHANCE
       ? DEMAND_SHOCK_NEGATIVE_MULTIPLIER
       : DEMAND_SHOCK_POSITIVE_MULTIPLIER;
 
@@ -298,65 +334,45 @@ function distributeResourceDemandAcrossSellers(
   randomFn: () => number,
 ): {
   playerSoldUnits: number;
-  averageNpcSoldUnits: number;
+  npcOffers: MarketplaceResourceTickResult["offers"];
   localSupplierSoldUnits: number;
-  averageNpcOfferedQuantity: number;
   demandShock: MarketplaceResourceTickResult["demandShock"];
 } {
-  const averageNpcOfferedQuantity = Math.max(
+  const sellerContexts = buildRetailSellerContexts(context);
+  const averageSellerPrice = calculateAverageSellerPrice(
+    sellerContexts.map((sellerContext) => sellerContext.offerPrice),
+  );
+  const randomizedWeightBySeller = Object.fromEntries(
+    sellerContexts.map((sellerContext) => {
+      const baseWeight = calculatePriceWeight(
+        sellerContext.offerPrice,
+        averageSellerPrice,
+        context.interRetailerSensitivity,
+      );
+      const randomizedWeight = baseWeight *
+        (SELLER_WEIGHT_RANDOMIZATION_MIN + randomFn() * SELLER_WEIGHT_RANDOMIZATION_RANGE);
+      return [sellerContext.sellerName, randomizedWeight];
+    }),
+  ) as Record<RetailSellerName, number>;
+  const totalRandomizedWeight = Object.values(randomizedWeightBySeller).reduce(
+    (sum, weight) => sum + weight,
     0,
-    Math.round(context.baseDemand * AVERAGE_NPC_DEMAND_SHARE),
   );
-  const averageSellerPrice =
-    (context.playerOfferPrice + context.averageNpcPrice + context.baseCityPrice) / 3;
 
-  const playerMaxSellUnits = Math.min(
-    context.listedQuantity,
-    context.availableInventory,
-  );
-  const playerWeight = calculatePriceWeight(
-    context.playerOfferPrice,
-    averageSellerPrice,
-    context.interRetailerSensitivity,
-  );
-  const averageNpcWeight = calculatePriceWeight(
-    context.averageNpcPrice,
-    averageSellerPrice,
-    context.interRetailerSensitivity,
-  );
-  const localSupplierWeight = calculatePriceWeight(
-    context.baseCityPrice,
-    averageSellerPrice,
-    context.interRetailerSensitivity,
-  );
-  const totalWeight = playerWeight + averageNpcWeight + localSupplierWeight;
-
-  const randomizedWeightBySeller = {
-    Player: playerWeight * (0.95 + randomFn() * 0.1),
-    "Average NPC": averageNpcWeight * (0.95 + randomFn() * 0.1),
-    "Local Suppliers": localSupplierWeight * (0.95 + randomFn() * 0.1),
-  } as const;
-  const totalRandomizedWeight =
-    randomizedWeightBySeller.Player +
-    randomizedWeightBySeller["Average NPC"] +
-    randomizedWeightBySeller["Local Suppliers"];
-
-  const normalizedShareBySeller = {
-    Player: totalRandomizedWeight > 0
-      ? randomizedWeightBySeller.Player / totalRandomizedWeight
-      : 0,
-    "Average NPC": totalRandomizedWeight > 0
-      ? randomizedWeightBySeller["Average NPC"] / totalRandomizedWeight
-      : 0,
-    "Local Suppliers": totalRandomizedWeight > 0
-      ? randomizedWeightBySeller["Local Suppliers"] / totalRandomizedWeight
-      : 0,
-  } as const;
-  const rawDemandBySeller: Record<RetailSellerName, number> = {
-    Player: totalDemandUnits * normalizedShareBySeller.Player,
-    "Average NPC": totalDemandUnits * normalizedShareBySeller["Average NPC"],
-    "Local Suppliers": totalDemandUnits * normalizedShareBySeller["Local Suppliers"],
-  };
+  const normalizedShareBySeller = Object.fromEntries(
+    sellerContexts.map((sellerContext) => [
+      sellerContext.sellerName,
+      totalRandomizedWeight > 0
+        ? randomizedWeightBySeller[sellerContext.sellerName] / totalRandomizedWeight
+        : 0,
+    ]),
+  ) as Record<RetailSellerName, number>;
+  const rawDemandBySeller = Object.fromEntries(
+    sellerContexts.map((sellerContext) => [
+      sellerContext.sellerName,
+      totalDemandUnits * normalizedShareBySeller[sellerContext.sellerName],
+    ]),
+  ) as Record<RetailSellerName, number>;
   let demandShock: MarketplaceResourceTickResult["demandShock"] = null;
 
   if (demandShockAdjustment) {
@@ -388,27 +404,38 @@ function distributeResourceDemandAcrossSellers(
     };
   }
 
-  const playerTargetUnits = Math.max(0, Math.floor(rawDemandBySeller.Player));
-  const averageNpcTargetUnits = Math.max(0, Math.floor(rawDemandBySeller["Average NPC"]));
-
+  const soldUnitsBySeller: Record<RetailSellerName, number> = {};
   let remainingDemandUnits = totalDemandUnits;
-  const playerSoldUnits = Math.min(playerTargetUnits, playerMaxSellUnits, remainingDemandUnits);
-  remainingDemandUnits -= playerSoldUnits;
+  for (const sellerContext of sellerContexts) {
+    const targetUnits = Math.max(
+      0,
+      Math.floor(rawDemandBySeller[sellerContext.sellerName] ?? 0),
+    );
+    const soldUnits = Math.min(targetUnits, sellerContext.maxSellUnits, remainingDemandUnits);
 
-  const averageNpcSoldUnits = Math.min(
-    averageNpcTargetUnits,
-    averageNpcOfferedQuantity,
-    remainingDemandUnits,
-  );
-  remainingDemandUnits -= averageNpcSoldUnits;
+    soldUnitsBySeller[sellerContext.sellerName] = soldUnits;
+    remainingDemandUnits -= soldUnits;
+  }
 
-  const localSupplierSoldUnits = Math.max(0, remainingDemandUnits);
+  if (remainingDemandUnits > 0) {
+    soldUnitsBySeller[LOCAL_SUPPLIERS_SELLER_NAME] =
+      (soldUnitsBySeller[LOCAL_SUPPLIERS_SELLER_NAME] ?? 0) + remainingDemandUnits;
+    remainingDemandUnits = 0;
+  }
+
+  const playerSoldUnits = soldUnitsBySeller[PLAYER_SELLER_NAME] ?? 0;
+  const localSupplierSoldUnits = soldUnitsBySeller[LOCAL_SUPPLIERS_SELLER_NAME] ?? 0;
+  const npcOffers = context.npcOffers.map((npcOffer) => ({
+    sellerName: npcOffer.sellerName,
+    offeredQuantity: npcOffer.offeredQuantity,
+    offerPrice: npcOffer.offerPrice,
+    soldQuantity: soldUnitsBySeller[npcOffer.sellerName] ?? 0,
+  }));
 
   return {
     playerSoldUnits,
-    averageNpcSoldUnits,
+    npcOffers,
     localSupplierSoldUnits,
-    averageNpcOfferedQuantity,
     demandShock,
   };
 }
@@ -421,6 +448,7 @@ export function resolveCityMarketplaceTick(
   lastMarketplaceTick?: MarketplaceTickResult | null,
   options?: {
     randomFn?: () => number;
+    lastMarketplaceTicks?: MarketplaceTickResult[];
   },
 ): {
   nextInventory: Inventory;
@@ -439,6 +467,7 @@ export function resolveCityMarketplaceTick(
     listedQuantityByResource,
     offerPriceByResource,
     lastMarketplaceTick,
+    options?.lastMarketplaceTicks,
   );
 
   // STEP 2: Apply bidirectional cross-resource substitution from relative price deviations.
@@ -462,9 +491,8 @@ export function resolveCityMarketplaceTick(
     const totalDemandUnits = Math.round(finalDemandByResource[context.resource] ?? 0);
     const {
       playerSoldUnits,
-      averageNpcSoldUnits,
+      npcOffers,
       localSupplierSoldUnits,
-      averageNpcOfferedQuantity,
       demandShock,
     } = distributeResourceDemandAcrossSellers(
       context,
@@ -481,19 +509,14 @@ export function resolveCityMarketplaceTick(
       demandShock,
       offers: [
         {
-          sellerName: "Player",
+          sellerName: PLAYER_SELLER_NAME,
           offeredQuantity: context.listedQuantity,
           offerPrice: context.playerOfferPrice,
           soldQuantity: playerSoldUnits,
         },
+        ...npcOffers,
         {
-          sellerName: "Average NPC",
-          offeredQuantity: averageNpcOfferedQuantity,
-          offerPrice: context.averageNpcPrice,
-          soldQuantity: averageNpcSoldUnits,
-        },
-        {
-          sellerName: "Local Suppliers",
+          sellerName: LOCAL_SUPPLIERS_SELLER_NAME,
           offeredQuantity: null,
           offerPrice: context.baseCityPrice,
           soldQuantity: localSupplierSoldUnits,

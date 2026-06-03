@@ -16,10 +16,11 @@ The runtime currently implements a small production simulation with:
 - city demand previews for consumer retail resources
 - intrinsic base resource cost and city-adjusted base retail price previews
 - player retail offers (quantity and price) per resource in one selected marketplace city
-- retail sell resolution each tick across `Player`, `Average NPC`, and `Local Suppliers`
+- retail sell resolution each tick across `Player`, `Average NPC`, `Follower NPC`, and `Local Suppliers`
 - cross-resource substitution, demand creation, and random per-resource demand shocks before seller settlement
 - whole-unit retail sales allocation with seller caps and Local Supplier fallback fulfillment
 - previous tick marketplace offer/sales snapshot storage for UI display, including per-resource shock reporting
+- bounded recent marketplace tick history storage for multi-tick NPC smoothing
 
 Retail phase flow is now implemented as: base demand -> substitution -> demand creation -> random demand shock -> sensitivity-weighted seller allocation.
 
@@ -51,7 +52,8 @@ Retail phase flow is now implemented as: base demand -> substitution -> demand c
 | `City marketplace` | UI/system | Consumer retail preview for one selected city. It shows resource rows with base cost, base city price, and base city demand. |
 | `BASE_CONSUMPTION_BY_RESOURCE` | record | Resource-to-base-consumption map used as the per-population starting point for consumer retail demand calculations. |
 | `Base city demand` | number | Derived per-resource demand for one city: `city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`. |
-| `Average NPC` | seller role | Secondary seller with quantity `Math.round(baseCityDemand * AVERAGE_NPC_DEMAND_SHARE)` and price anchored to average of base city price and last tick player offer price for the same resource. |
+| `Average NPC` | seller role | Secondary seller with quantity `Math.round(baseCityDemand * AVERAGE_NPC_DEMAND_SHARE)` and price anchored to average of base city price and last tick player offer price for the same resource, capped so it never exceeds `baseCityPrice`. |
+| `Follower NPC` | seller role | Adaptive seller with quantity based on smoothed recent player sold quantity for the same resource, bounded by a minimum quantity floor, and price anchored to smoothed recent player offer price with a `+/- 5%` adjustment based on follower sell-through across the recent smoothing window. |
 | `Local Suppliers` | seller role | Fallback seller that offers at `baseCityPrice` with effectively unlimited quantity in current retail resolution. |
 | `INTER_RETAILER_SENSITIVITY` | record | Per-resource exponent controlling seller demand-share responsiveness in weighted retailer competition. |
 | `CROSS_LEVEL_ELASTICITY` | record | Elasticity matrix used for bidirectional demand substitution between resource market levels. |
@@ -60,13 +62,14 @@ Retail phase flow is now implemented as: base demand -> substitution -> demand c
 | `Demand shock` | object/null | Per-resource random seller multiplier event (`DEMAND_SHOCK_CHANCE`, `DEMAND_SHOCK_NEGATIVE_MULTIPLIER`, `DEMAND_SHOCK_POSITIVE_MULTIPLIER`) applied before final target rounding. |
 | `Rounded demand` | number | Whole-unit demand used for sales: `Math.round(finalDemand)`. |
 | `Player sold units` | number | `min(floor(playerTargetDemand), floor(listedQuantity), floor(availableInventory), remainingDemand)`. |
-| `Average NPC sold units` | number | `min(floor(averageNpcTargetDemand), averageNpcOfferedQuantity, remainingDemand)`. |
-| `Local Supplier sold units` | number | Remaining whole-unit demand after Player and Average NPC sales. |
+| `NPC sold units` | number | Per-NPC whole-unit sales after weighted seller targeting, seller quantity caps, and remaining demand constraints. |
+| `Local Supplier sold units` | number | Remaining whole-unit demand after Player and active NPC seller sales. |
 | `MarketplaceDemandShockResult` | object | Snapshot payload for the shocked seller name, multiplier, and target-demand delta for one resource tick. |
 | `MarketplaceTickResult` | object | Previous tick seller-level retail summary for one city, with per-resource offers, sold quantities, and optional shock details. |
+| `Marketplace tick history` | array | Bounded recent `MarketplaceTickResult` history used by smoothing-based NPC strategies over the last `2..4` ticks. |
 | `getNationForCity()` | function | Derives a building's nation from its selected city. |
 | `NATION_TOTAL_POPULATION` | record | Nation-to-population totals derived from all city populations in that nation. |
-| `GameLoopState` | object | Core runtime state: `tick`, `money`, `inventory`, `buildings`, and `lastMarketplaceTick`. |
+| `GameLoopState` | object | Core runtime state: `tick`, `money`, `inventory`, `buildings`, `lastMarketplaceTick`, and `marketplaceTickHistory`. |
 
 ## Implemented Resource And Recipe Chain
 
@@ -99,6 +102,10 @@ Retail phase flow is now implemented as: base demand -> substitution -> demand c
 | `DEMAND_SHOCK_CHANCE` | `0.05` | `src/lib/constants/marketplaceConst.ts` |
 | `DEMAND_SHOCK_NEGATIVE_MULTIPLIER` | `0.85` | `src/lib/constants/marketplaceConst.ts` |
 | `DEMAND_SHOCK_POSITIVE_MULTIPLIER` | `1.15` | `src/lib/constants/marketplaceConst.ts` |
+| `FOLLOWER_NPC_PRICE_ADJUSTMENT_MULTIPLIER` | `0.05` | `src/lib/constants/marketplaceConst.ts` |
+| `FOLLOWER_NPC_LOW_SELL_THROUGH_THRESHOLD` | `0.1` | `src/lib/constants/marketplaceConst.ts` |
+| `FOLLOWER_NPC_MIN_QUANTITY_FLOOR` | `1` | `src/lib/constants/marketplaceConst.ts` |
+| `FOLLOWER_NPC_SMOOTHING_TICK_WINDOW` | `4` | `src/lib/constants/marketplaceConst.ts` |
 
 Current intrinsic base resource costs:
 

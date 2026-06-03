@@ -34,4 +34,5 @@ export interface GameLoopState {
   inventory: Inventory;
   buildings: Building[];
   lastMarketplaceTick: MarketplaceTickResult | null;
+  marketplaceTickHistory: MarketplaceTickResult[];
 }

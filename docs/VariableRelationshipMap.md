@@ -22,11 +22,13 @@ The runtime currently has a concrete multi-building production and retail-previe
 - Intrinsic `baseResourceCost` is derived from the cheapest producing recipe path, except cycle-dependent resources use `fixedBaseCost`.
 - `baseCityPrice` is derived as `baseResourceCost * (1 + city.wealth)`.
 - `baseCityDemand` is derived as `city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`.
-- The current city marketplace is a consumer retail flow where player offers compete against `Average NPC` and `Local Suppliers` per resource.
+- The current city marketplace is a consumer retail flow where player offers compete against `Average NPC`, `Follower NPC`, and `Local Suppliers` per resource.
 - The active marketplace city is player-selected and resolved each manual tick when valid offers are listed.
-- Offer resolution currently supports three sellers per listed resource: `Player`, `Average NPC`, and `Local Suppliers`.
+- Offer resolution currently supports one player seller, strategy-driven NPC sellers, and `Local Suppliers` per listed resource.
 - `Average NPC` offered quantity is `Math.round(baseCityDemand * AVERAGE_NPC_DEMAND_SHARE)`.
-- `Average NPC` offer price is the average of Local Supplier base city price and previous tick player offer price for the same resource (fallback to Local Supplier price when no previous player offer exists).
+- `Average NPC` offer price is the average of Local Supplier base city price and previous tick player offer price for the same resource (fallback to Local Supplier price when no previous player offer exists), capped at Local Supplier base city price.
+- `Follower NPC` offered quantity is the smoothed recent player sold quantity for the same resource, with a minimum quantity floor.
+- `Follower NPC` offer price is the smoothed recent player offer price for the same resource, adjusted by `FOLLOWER_NPC_PRICE_ADJUSTMENT_MULTIPLIER` up or down depending on whether recent follower sell-through is above or below `FOLLOWER_NPC_LOW_SELL_THROUGH_THRESHOLD`.
 - Retail demand flow follows explicit phases: base demand -> cross-resource substitution -> below-average-price demand creation -> random demand shocks -> seller allocation.
 - Seller demand split uses sensitivity-weighted retailer shares based on `INTER_RETAILER_SENSITIVITY[resource]`.
 - Random demand shocks run per resource with chance `DEMAND_SHOCK_CHANCE`, target one seller, and apply either `DEMAND_SHOCK_NEGATIVE_MULTIPLIER` or `DEMAND_SHOCK_POSITIVE_MULTIPLIER` before final seller allocation.
@@ -35,6 +37,7 @@ The runtime currently has a concrete multi-building production and retail-previe
 - If rounded demand is below `0.5` (i.e., rounds to `0`), no sale occurs for that resource.
 - `GameLoopState.money` starts at `1000` and increases from player marketplace sales.
 - `GameLoopState.lastMarketplaceTick` stores previous tick offer/sales results for listed resources.
+- `GameLoopState.marketplaceTickHistory` stores bounded recent marketplace tick results for smoothing-based NPC behavior.
 
 Important current constraints:
 
@@ -73,7 +76,7 @@ flowchart LR
   WORK --> DONE["Cycle completion"]
   DONE --> OUT["Add output resource"]
   OUT --> INV
-  INV --> RETAIL["Retail offer resolution\n(Player vs Average NPC vs Local Suppliers)"]
+  INV --> RETAIL["Retail offer resolution\n(Player vs NPC sellers vs Local Suppliers)"]
   RETAIL --> INV
   RETAIL --> MONEY["Money update"]
   RETAIL --> SNAP["lastMarketplaceTick snapshot"]
@@ -88,7 +91,7 @@ Current meaning:
 - Inventory is the persisted sink and source for recipe chaining.
 - After production each manual tick, retail resolution runs for listed offers in the selected marketplace city.
 - Retail resolution currently runs in steps: substitution and demand creation adjust per-resource demand, random shocks adjust one seller target when triggered, then sensitivity-weighted seller allocation applies caps and whole-unit settlement.
-- Tick results persist a seller-level market snapshot in `lastMarketplaceTick`.
+- Tick results persist a seller-level market snapshot in `lastMarketplaceTick` and append to bounded `marketplaceTickHistory` for recent NPC smoothing.
 
 ### 3.2 Expanded target loop (template)
 
@@ -249,15 +252,18 @@ Current pricing formulas:
 - `createdDemand(resource)` is added when one or more seller prices are below that resource average seller price, bounded by demand-creation multiplier cap and dampening.
 - `finalDemand(resource) = substitutionAdjustedDemand + createdDemand`.
 - `averageNpcOfferedQuantity(resource) = Math.round(baseCityDemand(resource, city) * AVERAGE_NPC_DEMAND_SHARE)`.
-- `averageNpcPrice(resource) = (baseCityPrice(resource, city) + lastTickPlayerPrice(resource)) / 2` when last tick exists, otherwise `baseCityPrice(resource, city)`.
-- `averageSellerPrice(resource) = (playerOfferPrice + averageNpcPrice + baseCityPrice) / 3`.
+- `averageNpcPrice(resource) = min(baseCityPrice(resource, city), (baseCityPrice(resource, city) + lastTickPlayerPrice(resource)) / 2)` when last tick exists, otherwise `baseCityPrice(resource, city)`.
+- `followerNpcOfferedQuantity(resource) = max(FOLLOWER_NPC_MIN_QUANTITY_FLOOR, round(smoothedRecentPlayerSoldQuantity(resource)))`.
+- `followerNpcBasePrice(resource) = smoothedRecentPlayerOfferPrice(resource)` over the bounded recent marketplace tick window.
+- `followerNpcPrice(resource) = followerNpcBasePrice(resource) * (1 +/- FOLLOWER_NPC_PRICE_ADJUSTMENT_MULTIPLIER)` depending on whether follower sell-through is below or above `FOLLOWER_NPC_LOW_SELL_THROUGH_THRESHOLD` over the same smoothing window.
+- `averageSellerPrice(resource) = mean(activeSellerPrices(resource))` across player, active NPC sellers, and Local Suppliers.
 - `sellerWeight(resource, seller) = (averageSellerPrice / sellerPrice) ^ INTER_RETAILER_SENSITIVITY[resource]`.
 - `demandShock(resource)` may target one seller with multiplier (`0.85` or `1.15` default) and redistributes the demand delta across remaining sellers before rounding targets.
 - `sellerTargetUnits(resource, seller) = floor(shockAdjustedSellerRawDemand)` after optional per-seller +/- shock redistribution and per-seller random share jitter.
 - `roundedDemand(resource) = Math.round(finalDemand(resource))`.
 - `playerSoldUnits(resource) = min(playerTargetUnits, floor(listedQuantity), floor(availableInventory), remainingDemand)`.
-- `averageNpcSoldUnits(resource) = min(averageNpcTargetUnits, averageNpcOfferedQuantity, remainingDemand)`.
-- `localSupplierSoldUnits(resource) = remainingDemandAfterPlayerAndAverageNpc`.
+- `npcSoldUnits(resource, npcSeller) = min(npcTargetUnits, npcOfferedQuantity, remainingDemand)` for each active NPC seller in seller-order allocation.
+- `localSupplierSoldUnits(resource) = remainingDemandAfterPlayerAndNpcSellers`.
 - `earnedMoney = Σ(playerSoldUnits(resource) * playerOfferPrice(resource))` across listed resources.
 - Second-pass demand modifiers (price subsidies, product quality) are planned later and do not affect current demand in the current loop.
 
