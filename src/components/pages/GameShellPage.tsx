@@ -9,7 +9,7 @@ import {
   CityMarketplaceCard,
 } from "@/components/ui";
 import {
-  AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE,
+  BUILDING_CONFIG_BY_TYPE,
   CITY_TYPES,
   getNationForCity,
   RECIPE_BY_TYPE,
@@ -145,9 +145,10 @@ export function GameShellPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               {gameState.buildings.map((building) => {
                 const maxStaff = calculateMaxStaff(building.type, building.size);
+                const maxSelectableStaff = Math.max(maxStaff, maxStaff * 3);
                 const recipe = RECIPE_BY_TYPE[building.recipeType];
                 const availableRecipeTypes =
-                  AVAILABLE_RECIPE_TYPES_BY_BUILDING_TYPE[building.type];
+                  BUILDING_CONFIG_BY_TYPE[building.type].availableRecipes;
                 const effectiveWorkThisTick =
                   calculateEffectiveBuildingWorkPerTick(building);
                 const canStartRecipe = canStartRecipeFromInventory(
@@ -271,7 +272,7 @@ export function GameShellPage() {
                         id={`staff-slider-${building.id}`}
                         type="range"
                         min={0}
-                        max={maxStaff}
+                        max={maxSelectableStaff}
                         value={building.currentStaff}
                         onChange={(event) =>
                           handleStaffChange(

@@ -1,10 +1,10 @@
 import type { Building, BuildingType, CityType, GameLoopState } from "@/lib/types";
 import {
-  DEFAULT_RECIPE_BY_BUILDING_TYPE,
+  BUILDING_CONFIG_BY_TYPE,
   getNationForCity,
   INITIAL_BUILDING_SIZE,
 } from "@/lib/constants";
-import { getMinimumWorkersForBuildingType } from "./buildingStaffing";
+import { getMinimumWorkersForBuildingType } from "./buildingManager";
 
 function getNextBuildingId(buildings: Building[], type: BuildingType): string {
   const prefix = `${type}-`;
@@ -40,7 +40,7 @@ export function createBuilding(
     targetEfficiency: 0,
     currentEfficiency: 0,
     currentRecipeWorkProgress: 0,
-    recipeType: DEFAULT_RECIPE_BY_BUILDING_TYPE[type],
+    recipeType: BUILDING_CONFIG_BY_TYPE[type].defaultRecipe,
     city,
     nation: getNationForCity(city),
   };

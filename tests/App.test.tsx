@@ -113,9 +113,9 @@ describe("App", () => {
     expect(screen.getByText(/money:\s*€\s*1,000/i)).toBeInTheDocument();
     expect(screen.getByText(/grain in inventory:\s*1/i)).toBeInTheDocument();
     expect(screen.getByText(/previous efficiency:\s*0,000/i)).toBeInTheDocument();
-    expect(screen.getByText(/current efficiency:\s*0,56[89]/i)).toBeInTheDocument();
-    expect(screen.getByText(/target efficiency:\s*0,909/i)).toBeInTheDocument();
-    expect(screen.getByText(/current recipe work progress:\s*13,76[34]/i)).toBeInTheDocument();
+    expect(screen.getByText(/current efficiency:\s*0,854/i)).toBeInTheDocument();
+    expect(screen.getByText(/target efficiency:\s*1,139/i)).toBeInTheDocument();
+    expect(screen.getByText(/current recipe work progress:\s*70,79[34]/i)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/building type/i), {
       target: { value: "foodprocessingfactory" },
