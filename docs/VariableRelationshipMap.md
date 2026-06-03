@@ -22,9 +22,14 @@ The runtime currently has a concrete multi-building production and retail-previe
 - Intrinsic `baseResourceCost` is derived from the cheapest producing recipe path, except cycle-dependent resources use `fixedBaseCost`.
 - `baseCityPrice` is derived as `baseResourceCost * (1 + city.wealth)`.
 - `baseCityDemand` is derived as `city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`.
-- The current city marketplace is a consumer retail flow where player offers compete against Local Suppliers (base city price) per resource.
+- The current city marketplace is a consumer retail flow where player offers compete against `Average NPC` and `Local Suppliers` per resource.
 - The active marketplace city is player-selected and resolved each manual tick when valid offers are listed.
-- Offer resolution currently supports two sellers per listed resource: `Player` and `Local Suppliers`.
+- Offer resolution currently supports three sellers per listed resource: `Player`, `Average NPC`, and `Local Suppliers`.
+- `Average NPC` offered quantity is `Math.round(baseCityDemand * AVERAGE_NPC_DEMAND_SHARE)`.
+- `Average NPC` offer price is the average of Local Supplier base city price and previous tick player offer price for the same resource (fallback to Local Supplier price when no previous player offer exists).
+- Retail demand flow follows explicit phases: base demand -> cross-resource substitution -> below-average-price demand creation -> random demand shocks -> seller allocation.
+- Seller demand split uses sensitivity-weighted retailer shares based on `INTER_RETAILER_SENSITIVITY[resource]`.
+- Random demand shocks run per resource with chance `DEMAND_SHOCK_CHANCE`, target one seller, and apply either `DEMAND_SHOCK_NEGATIVE_MULTIPLIER` or `DEMAND_SHOCK_POSITIVE_MULTIPLIER` before final seller allocation.
 - Local Suppliers are treated as effectively unlimited offered quantity for fallback fulfillment.
 - Marketplace demand and sales are resolved in whole units (`Math.round` demand/share; floor listed quantity and available inventory).
 - If rounded demand is below `0.5` (i.e., rounds to `0`), no sale occurs for that resource.
@@ -37,7 +42,8 @@ Important current constraints:
 - `baseResourceCost` remains a reference value; it is not directly transacted.
 - `baseCityPrice` is used as Local Supplier offer price baseline in current retail resolution.
 - Marketplace sales use whole-unit allocation only; no fractional unit sales are recorded.
-- Price elasticity, price subsidies, product quality, education-based quality, and city-adjusted wage calculations are planned later.
+- Cross-resource substitution and demand creation are now active only inside listed marketplace resources and use bounded constants (`SUBSTITUTION_DEVIATION_THRESHOLD`, `SUBSTITUTION_DAMPENING`, demand-creation caps/dampening).
+- Price subsidies, product quality, education-based quality, and city-adjusted wage calculations are planned later.
 
 Prestige or progression event sources may be inventoried separately when that subsystem is implemented (e.g. under `docs/superpowers/completed/`).
 
@@ -67,7 +73,7 @@ flowchart LR
   WORK --> DONE["Cycle completion"]
   DONE --> OUT["Add output resource"]
   OUT --> INV
-  INV --> RETAIL["Retail offer resolution\n(Player vs Local Suppliers)"]
+  INV --> RETAIL["Retail offer resolution\n(Player vs Average NPC vs Local Suppliers)"]
   RETAIL --> INV
   RETAIL --> MONEY["Money update"]
   RETAIL --> SNAP["lastMarketplaceTick snapshot"]
@@ -81,7 +87,7 @@ Current meaning:
 - Output is added only when recipe work reaches completion.
 - Inventory is the persisted sink and source for recipe chaining.
 - After production each manual tick, retail resolution runs for listed offers in the selected marketplace city.
-- Retail resolution currently compares player offer price against base city price Local Suppliers and allocates whole-unit sales.
+- Retail resolution currently runs in steps: substitution and demand creation adjust per-resource demand, random shocks adjust one seller target when triggered, then sensitivity-weighted seller allocation applies caps and whole-unit settlement.
 - Tick results persist a seller-level market snapshot in `lastMarketplaceTick`.
 
 ### 3.2 Expanded target loop (template)
@@ -239,13 +245,21 @@ Current pricing formulas:
 - `baseResourceCost(resource)` is the cheapest recursive recipe cost unless `resource.isCycleDependentResource` is true.
 - `baseCityPrice(resource, city) = baseResourceCost(resource) * (1 + city.wealth)`.
 - `baseCityDemand(resource, city) = city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`.
-- `playerShare(resource) = (1 / playerOfferPrice) / ((1 / playerOfferPrice) + (1 / baseCityPrice))`.
-- `roundedDemand(resource) = Math.round(baseCityDemand(resource, city))`.
-- `roundedPlayerShareUnits(resource) = Math.round(baseCityDemand(resource, city) * playerShare(resource))`.
-- `playerSoldUnits(resource) = min(roundedPlayerShareUnits, floor(listedQuantity), floor(availableInventory))`.
-- `localSupplierSoldUnits(resource) = max(0, roundedDemand - playerSoldUnits)`.
+- `substitutionAdjustedDemand(resource) = baseDemand - substitutionLosses + substitutionGains` using cross-level elasticity and relative price-ratio deviation against base city price ratios.
+- `createdDemand(resource)` is added when one or more seller prices are below that resource average seller price, bounded by demand-creation multiplier cap and dampening.
+- `finalDemand(resource) = substitutionAdjustedDemand + createdDemand`.
+- `averageNpcOfferedQuantity(resource) = Math.round(baseCityDemand(resource, city) * AVERAGE_NPC_DEMAND_SHARE)`.
+- `averageNpcPrice(resource) = (baseCityPrice(resource, city) + lastTickPlayerPrice(resource)) / 2` when last tick exists, otherwise `baseCityPrice(resource, city)`.
+- `averageSellerPrice(resource) = (playerOfferPrice + averageNpcPrice + baseCityPrice) / 3`.
+- `sellerWeight(resource, seller) = (averageSellerPrice / sellerPrice) ^ INTER_RETAILER_SENSITIVITY[resource]`.
+- `demandShock(resource)` may target one seller with multiplier (`0.85` or `1.15` default) and redistributes the demand delta across remaining sellers before rounding targets.
+- `sellerTargetUnits(resource, seller) = floor(shockAdjustedSellerRawDemand)` after optional per-seller +/- shock redistribution and per-seller random share jitter.
+- `roundedDemand(resource) = Math.round(finalDemand(resource))`.
+- `playerSoldUnits(resource) = min(playerTargetUnits, floor(listedQuantity), floor(availableInventory), remainingDemand)`.
+- `averageNpcSoldUnits(resource) = min(averageNpcTargetUnits, averageNpcOfferedQuantity, remainingDemand)`.
+- `localSupplierSoldUnits(resource) = remainingDemandAfterPlayerAndAverageNpc`.
 - `earnedMoney = Σ(playerSoldUnits(resource) * playerOfferPrice(resource))` across listed resources.
-- Price elasticity, price subsidies, and product quality are planned second-pass modifiers and do not affect current demand.
+- Second-pass demand modifiers (price subsidies, product quality) are planned later and do not affect current demand in the current loop.
 
 ### 6.1 Site, Resource, and First Boundary Identity
 
@@ -431,7 +445,7 @@ Map each UI surface to which relationships it must explain (not just display a n
 | Origins / changelog tab | Characteristic changes by source |
 | Production log and analytics | Completion snapshots and trends |
 | Overlay center | Current overlay, per-site impact, forecast if any |
-| City marketplace | Consumer retail demand, base city price Local Supplier baseline, player listed quantity/price, and previous tick seller-level sold units |
+| City marketplace | Consumer retail demand, base city price Local Supplier baseline, player listed quantity/price, previous tick seller-level sold units, and per-resource shock status/details |
 | Market modals | Price/limit factors, economy/overlay pressure, loyalty |
 | Finance ownership panel | Special roles, distributions, conversion costs |
 

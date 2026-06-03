@@ -10,9 +10,16 @@ export interface MarketplaceOfferResult {
   soldQuantity: number;
 }
 
+export interface MarketplaceDemandShockResult {
+  sellerName: string;
+  multiplier: number;
+  targetDemandDelta: number;
+}
+
 export interface MarketplaceResourceTickResult {
   resource: ResourceType;
   baseDemand: number;
+  demandShock: MarketplaceDemandShockResult | null;
   offers: MarketplaceOfferResult[];
 }
 

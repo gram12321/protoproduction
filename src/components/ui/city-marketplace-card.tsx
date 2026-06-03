@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   CITY_DATA,
   CITY_TYPES,
@@ -57,9 +58,18 @@ export function CityMarketplaceCard({
   onSellQuantityChange,
   onOfferPriceChange,
 }: CityMarketplaceCardProps) {
-  const baseDemandByResource = calculateBaseCityDemandByResource(selectedCity);
-  const baseResourceCostByResource = calculateBaseResourceCostByResource();
-  const baseCityPriceByResource = calculateBaseCityPriceByResource(selectedCity);
+  const baseDemandByResource = useMemo(
+    () => calculateBaseCityDemandByResource(selectedCity),
+    [selectedCity],
+  );
+  const baseResourceCostByResource = useMemo(
+    () => calculateBaseResourceCostByResource(),
+    [],
+  );
+  const baseCityPriceByResource = useMemo(
+    () => calculateBaseCityPriceByResource(selectedCity),
+    [selectedCity],
+  );
 
   return (
     <Card>
@@ -196,6 +206,20 @@ export function CityMarketplaceCard({
               <div key={resourceResult.resource} className="space-y-2">
                 <p className="text-sm font-medium capitalize">
                   {resourceResult.resource} | Demand: {formatNumber(resourceResult.baseDemand)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {resourceResult.demandShock
+                    ? (
+                      <>
+                        Shock: {resourceResult.demandShock.sellerName} x
+                        {formatNumber(resourceResult.demandShock.multiplier, {
+                          decimals: 2,
+                          forceDecimals: true,
+                        })}
+                        {" "}(target delta {formatNumber(resourceResult.demandShock.targetDemandDelta)})
+                      </>
+                    )
+                    : "Shock: none this tick"}
                 </p>
                 <div className="rounded-md border">
                   <Table>

@@ -16,11 +16,12 @@ The runtime currently implements a small production simulation with:
 - city demand previews for consumer retail resources
 - intrinsic base resource cost and city-adjusted base retail price previews
 - player retail offers (quantity and price) per resource in one selected marketplace city
-- retail sell resolution each tick against Local Suppliers (base city price)
-- whole-unit retail sales allocation and fallback fulfillment by Local Suppliers
-- previous tick marketplace offer/sales snapshot storage for UI display
+- retail sell resolution each tick across `Player`, `Average NPC`, and `Local Suppliers`
+- cross-resource substitution, demand creation, and random per-resource demand shocks before seller settlement
+- whole-unit retail sales allocation with seller caps and Local Supplier fallback fulfillment
+- previous tick marketplace offer/sales snapshot storage for UI display, including per-resource shock reporting
 
-Retail currently supports only player versus Local Suppliers. Multi-seller competition, elasticity, subsidies, product quality effects, and city-specific wage/education effects are not yet implemented.
+Retail phase flow is now implemented as: base demand -> substitution -> demand creation -> random demand shock -> sensitivity-weighted seller allocation.
 
 ## Domain Vocabulary
 
@@ -50,12 +51,19 @@ Retail currently supports only player versus Local Suppliers. Multi-seller compe
 | `City marketplace` | UI/system | Consumer retail preview for one selected city. It shows resource rows with base cost, base city price, and base city demand. |
 | `BASE_CONSUMPTION_BY_RESOURCE` | record | Resource-to-base-consumption map used as the per-population starting point for consumer retail demand calculations. |
 | `Base city demand` | number | Derived per-resource demand for one city: `city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`. |
+| `Average NPC` | seller role | Secondary seller with quantity `Math.round(baseCityDemand * AVERAGE_NPC_DEMAND_SHARE)` and price anchored to average of base city price and last tick player offer price for the same resource. |
 | `Local Suppliers` | seller role | Fallback seller that offers at `baseCityPrice` with effectively unlimited quantity in current retail resolution. |
-| `Player share` | number | Price-weighted share versus Local Suppliers: `(1 / playerOfferPrice) / ((1 / playerOfferPrice) + (1 / baseCityPrice))`. |
-| `Rounded demand` | number | Whole-unit demand used for sales: `Math.round(baseCityDemand)`. |
-| `Player sold units` | number | Whole-unit player sales: `min(Math.round(baseCityDemand * playerShare), floor(listedQuantity), floor(availableInventory))`. |
-| `Local Supplier sold units` | number | `max(0, roundedDemand - playerSoldUnits)`. |
-| `MarketplaceTickResult` | object | Previous tick seller-level retail summary for one city, with per-resource offers and sold quantities. |
+| `INTER_RETAILER_SENSITIVITY` | record | Per-resource exponent controlling seller demand-share responsiveness in weighted retailer competition. |
+| `CROSS_LEVEL_ELASTICITY` | record | Elasticity matrix used for bidirectional demand substitution between resource market levels. |
+| `Substitution adjusted demand` | number | `baseDemand - substitutionLosses + substitutionGains` after pairwise relative-price substitution pass. |
+| `Created demand` | number | Additional demand added when seller prices are below resource average seller price, bounded by creation caps and dampening constants. |
+| `Demand shock` | object/null | Per-resource random seller multiplier event (`DEMAND_SHOCK_CHANCE`, `DEMAND_SHOCK_NEGATIVE_MULTIPLIER`, `DEMAND_SHOCK_POSITIVE_MULTIPLIER`) applied before final target rounding. |
+| `Rounded demand` | number | Whole-unit demand used for sales: `Math.round(finalDemand)`. |
+| `Player sold units` | number | `min(floor(playerTargetDemand), floor(listedQuantity), floor(availableInventory), remainingDemand)`. |
+| `Average NPC sold units` | number | `min(floor(averageNpcTargetDemand), averageNpcOfferedQuantity, remainingDemand)`. |
+| `Local Supplier sold units` | number | Remaining whole-unit demand after Player and Average NPC sales. |
+| `MarketplaceDemandShockResult` | object | Snapshot payload for the shocked seller name, multiplier, and target-demand delta for one resource tick. |
+| `MarketplaceTickResult` | object | Previous tick seller-level retail summary for one city, with per-resource offers, sold quantities, and optional shock details. |
 | `getNationForCity()` | function | Derives a building's nation from its selected city. |
 | `NATION_TOTAL_POPULATION` | record | Nation-to-population totals derived from all city populations in that nation. |
 | `GameLoopState` | object | Core runtime state: `tick`, `money`, `inventory`, `buildings`, and `lastMarketplaceTick`. |
@@ -82,6 +90,15 @@ Retail currently supports only player versus Local Suppliers. Multi-seller compe
 | `STAFF_GROWTH_BASE` | `2` | `src/lib/constants/buildingConst.ts` |
 | `water.fixedBaseCost` | `16` | `src/lib/types/resourceTypes.ts` |
 | `BASE_CONSUMPTION_BY_RESOURCE` | resource-specific values from `0.0001` to `0.1` | `src/lib/constants/popConst.ts` |
+| `AVERAGE_NPC_DEMAND_SHARE` | `0.2` | `src/lib/constants/marketplaceConst.ts` |
+| `SUBSTITUTION_DEVIATION_THRESHOLD` | `0.02` | `src/lib/constants/marketplaceConst.ts` |
+| `SUBSTITUTION_DAMPENING` | `0.5` | `src/lib/constants/marketplaceConst.ts` |
+| `DEMAND_CREATION_SENSITIVITY_MULTIPLIER` | `0.8` | `src/lib/constants/marketplaceConst.ts` |
+| `DEMAND_CREATION_MAX_ADDITIONAL_MULTIPLIER` | `0.5` | `src/lib/constants/marketplaceConst.ts` |
+| `DEMAND_CREATION_DAMPENING` | `0.3` | `src/lib/constants/marketplaceConst.ts` |
+| `DEMAND_SHOCK_CHANCE` | `0.05` | `src/lib/constants/marketplaceConst.ts` |
+| `DEMAND_SHOCK_NEGATIVE_MULTIPLIER` | `0.85` | `src/lib/constants/marketplaceConst.ts` |
+| `DEMAND_SHOCK_POSITIVE_MULTIPLIER` | `1.15` | `src/lib/constants/marketplaceConst.ts` |
 
 Current intrinsic base resource costs:
 
@@ -97,7 +114,7 @@ Current intrinsic base resource costs:
 
 ## Future Design Intentions
 
-- Add price elasticity after the current static demand preview is stable.
+- Tune and expand the current elasticity model after balancing passes on live gameplay data.
 - Add price subsidies as a resource or market modifier after price behavior exists.
 - Let product quality influence demand and price in a later pass.
 - Keep education out of current retail pricing; use it later for product quality and wage calculations.
