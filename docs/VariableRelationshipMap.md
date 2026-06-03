@@ -22,13 +22,21 @@ The runtime currently has a concrete multi-building production and retail-previe
 - Intrinsic `baseResourceCost` is derived from the cheapest producing recipe path, except cycle-dependent resources use `fixedBaseCost`.
 - `baseCityPrice` is derived as `baseResourceCost * (1 + city.wealth)`.
 - `baseCityDemand` is derived as `city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`.
-- The current city marketplace is a consumer retail preview, not a general input trading market.
-- `GameLoopState.money` starts at `1000` and does not change in the baseline tick flow.
+- The current city marketplace is a consumer retail flow where player offers compete against Local Suppliers (base city price) per resource.
+- The active marketplace city is player-selected and resolved each manual tick when valid offers are listed.
+- Offer resolution currently supports two sellers per listed resource: `Player` and `Local Suppliers`.
+- Local Suppliers are treated as effectively unlimited offered quantity for fallback fulfillment.
+- Marketplace demand and sales are resolved in whole units (`Math.round` demand/share; floor listed quantity and available inventory).
+- If rounded demand is below `0.5` (i.e., rounds to `0`), no sale occurs for that resource.
+- `GameLoopState.money` starts at `1000` and increases from player marketplace sales.
+- `GameLoopState.lastMarketplaceTick` stores previous tick offer/sales results for listed resources.
 
 Important current constraints:
 
 - `size` and `currentStaff` do not directly multiply output amount; they influence effective work and completion speed.
-- `baseResourceCost` and `baseCityPrice` are reference values only; they do not yet consume inventory or change money.
+- `baseResourceCost` remains a reference value; it is not directly transacted.
+- `baseCityPrice` is used as Local Supplier offer price baseline in current retail resolution.
+- Marketplace sales use whole-unit allocation only; no fractional unit sales are recorded.
 - Price elasticity, price subsidies, product quality, education-based quality, and city-adjusted wage calculations are planned later.
 
 Prestige or progression event sources may be inventoried separately when that subsystem is implemented (e.g. under `docs/superpowers/completed/`).
@@ -59,6 +67,10 @@ flowchart LR
   WORK --> DONE["Cycle completion"]
   DONE --> OUT["Add output resource"]
   OUT --> INV
+  INV --> RETAIL["Retail offer resolution\n(Player vs Local Suppliers)"]
+  RETAIL --> INV
+  RETAIL --> MONEY["Money update"]
+  RETAIL --> SNAP["lastMarketplaceTick snapshot"]
 ```
 
 Current meaning:
@@ -68,6 +80,9 @@ Current meaning:
 - Inventory provides required inputs when a cycle starts.
 - Output is added only when recipe work reaches completion.
 - Inventory is the persisted sink and source for recipe chaining.
+- After production each manual tick, retail resolution runs for listed offers in the selected marketplace city.
+- Retail resolution currently compares player offer price against base city price Local Suppliers and allocates whole-unit sales.
+- Tick results persist a seller-level market snapshot in `lastMarketplaceTick`.
 
 ### 3.2 Expanded target loop (template)
 
@@ -224,6 +239,12 @@ Current pricing formulas:
 - `baseResourceCost(resource)` is the cheapest recursive recipe cost unless `resource.isCycleDependentResource` is true.
 - `baseCityPrice(resource, city) = baseResourceCost(resource) * (1 + city.wealth)`.
 - `baseCityDemand(resource, city) = city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`.
+- `playerShare(resource) = (1 / playerOfferPrice) / ((1 / playerOfferPrice) + (1 / baseCityPrice))`.
+- `roundedDemand(resource) = Math.round(baseCityDemand(resource, city))`.
+- `roundedPlayerShareUnits(resource) = Math.round(baseCityDemand(resource, city) * playerShare(resource))`.
+- `playerSoldUnits(resource) = min(roundedPlayerShareUnits, floor(listedQuantity), floor(availableInventory))`.
+- `localSupplierSoldUnits(resource) = max(0, roundedDemand - playerSoldUnits)`.
+- `earnedMoney = Σ(playerSoldUnits(resource) * playerOfferPrice(resource))` across listed resources.
 - Price elasticity, price subsidies, and product quality are planned second-pass modifiers and do not affect current demand.
 
 ### 6.1 Site, Resource, and First Boundary Identity
@@ -410,7 +431,7 @@ Map each UI surface to which relationships it must explain (not just display a n
 | Origins / changelog tab | Characteristic changes by source |
 | Production log and analytics | Completion snapshots and trends |
 | Overlay center | Current overlay, per-site impact, forecast if any |
-| City marketplace | Consumer retail demand, intrinsic base resource cost, and city wealth adjusted base city price |
+| City marketplace | Consumer retail demand, base city price Local Supplier baseline, player listed quantity/price, and previous tick seller-level sold units |
 | Market modals | Price/limit factors, economy/overlay pressure, loyalty |
 | Finance ownership panel | Special roles, distributions, conversion costs |
 
@@ -427,7 +448,7 @@ Use as a checklist when wiring a new variable group. Replace placeholders with r
 | Achievements | Threshold checks use persisted log scores; no silent fallbacks. |
 | Contracts | Separate requirement types for distinct signals (do not overload one field). |
 | Overlay integration | Bounded deviations via dedicated services; exposed in UI. |
-| City retail marketplace | Keep `baseResourceCost`, `baseCityPrice`, and `baseCityDemand` separate until price elasticity and quality are wired. |
+| City retail marketplace | Keep `baseResourceCost`, `baseCityPrice`, and `baseCityDemand` separate; enforce whole-unit sales; preserve `lastMarketplaceTick` seller snapshot integrity. |
 | Markets | Bulk/seasonal channels documented; research scaling explicit. |
 | Ownership slice | Active rules documented separately from deferred share-market runtime. |
 | Display-only data | Descriptors or tags marked display-only until gameplay consumes them. |

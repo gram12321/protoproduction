@@ -156,6 +156,7 @@ describe("App", () => {
     expect(screen.getByText(/money:\s*€1,000/i)).toBeInTheDocument();
     expect(screen.getByText(/previous tick offer results/i)).toBeInTheDocument();
     expect(screen.getAllByText(/local suppliers/i)).toHaveLength(2);
+    expect(screen.getByRole("cell", { name: /average npc/i })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: /player/i })).toBeInTheDocument();
     expect(screen.getByText(/infinity/i)).toBeInTheDocument();
   });

@@ -15,8 +15,12 @@ The runtime currently implements a small production simulation with:
 - manual tick progression through `processGameTick`
 - city demand previews for consumer retail resources
 - intrinsic base resource cost and city-adjusted base retail price previews
+- player retail offers (quantity and price) per resource in one selected marketplace city
+- retail sell resolution each tick against Local Suppliers (base city price)
+- whole-unit retail sales allocation and fallback fulfillment by Local Suppliers
+- previous tick marketplace offer/sales snapshot storage for UI display
 
-Retail pricing is currently a reference display only. It is not yet connected to sales, inventory depletion, money, price elasticity, price subsidies, product quality, or city-specific wage/education effects.
+Retail currently supports only player versus Local Suppliers. Multi-seller competition, elasticity, subsidies, product quality effects, and city-specific wage/education effects are not yet implemented.
 
 ## Domain Vocabulary
 
@@ -46,9 +50,15 @@ Retail pricing is currently a reference display only. It is not yet connected to
 | `City marketplace` | UI/system | Consumer retail preview for one selected city. It shows resource rows with base cost, base city price, and base city demand. |
 | `BASE_CONSUMPTION_BY_RESOURCE` | record | Resource-to-base-consumption map used as the per-population starting point for consumer retail demand calculations. |
 | `Base city demand` | number | Derived per-resource demand for one city: `city.population * city.wealth * BASE_CONSUMPTION_BY_RESOURCE[resource]`. |
+| `Local Suppliers` | seller role | Fallback seller that offers at `baseCityPrice` with effectively unlimited quantity in current retail resolution. |
+| `Player share` | number | Price-weighted share versus Local Suppliers: `(1 / playerOfferPrice) / ((1 / playerOfferPrice) + (1 / baseCityPrice))`. |
+| `Rounded demand` | number | Whole-unit demand used for sales: `Math.round(baseCityDemand)`. |
+| `Player sold units` | number | Whole-unit player sales: `min(Math.round(baseCityDemand * playerShare), floor(listedQuantity), floor(availableInventory))`. |
+| `Local Supplier sold units` | number | `max(0, roundedDemand - playerSoldUnits)`. |
+| `MarketplaceTickResult` | object | Previous tick seller-level retail summary for one city, with per-resource offers and sold quantities. |
 | `getNationForCity()` | function | Derives a building's nation from its selected city. |
 | `NATION_TOTAL_POPULATION` | record | Nation-to-population totals derived from all city populations in that nation. |
-| `GameLoopState` | object | Core runtime state: `tick`, `money`, `inventory`, and `buildings`. |
+| `GameLoopState` | object | Core runtime state: `tick`, `money`, `inventory`, `buildings`, and `lastMarketplaceTick`. |
 
 ## Implemented Resource And Recipe Chain
 

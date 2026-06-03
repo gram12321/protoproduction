@@ -33,6 +33,7 @@ export function processGameTick(
       marketplaceCity,
       listedQuantityByResource,
       offerPriceByResource,
+      state.lastMarketplaceTick,
     );
 
   return {

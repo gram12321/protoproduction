@@ -30,16 +30,22 @@ export function calculateBaseCityDemandByResource(
   ) as Record<ResourceType, number>;
 }
 
-function calculateDemandShareFromPrice(
-  ownPrice: number,
-  competingPrice: number,
-): number {
-  const safeOwnPrice = Math.max(ownPrice, Number.EPSILON);
-  const safeCompetingPrice = Math.max(competingPrice, Number.EPSILON);
-  const ownWeight = 1 / safeOwnPrice;
-  const competingWeight = 1 / safeCompetingPrice;
+function calculatePriceWeight(price: number): number {
+  return 1 / Math.max(price, Number.EPSILON);
+}
 
-  return ownWeight / (ownWeight + competingWeight);
+function findLastTickPlayerOfferPrice(
+  lastMarketplaceTick: MarketplaceTickResult | null | undefined,
+  resource: ResourceType,
+): number | undefined {
+  const lastResourceResult = lastMarketplaceTick?.resources.find(
+    (result) => result.resource === resource,
+  );
+  const playerOffer = lastResourceResult?.offers.find(
+    (offer) => offer.sellerName === "Player",
+  );
+
+  return playerOffer?.offerPrice;
 }
 
 export function resolveCityMarketplaceTick(
@@ -47,6 +53,7 @@ export function resolveCityMarketplaceTick(
   city: CityType,
   listedQuantityByResource: Partial<Record<ResourceType, number>>,
   offerPriceByResource: Partial<Record<ResourceType, number>>,
+  lastMarketplaceTick?: MarketplaceTickResult | null,
 ): {
   nextInventory: Inventory;
   earnedMoney: number;
@@ -71,16 +78,43 @@ export function resolveCityMarketplaceTick(
     const baseDemand = calculateBaseCityDemand(city, resource);
     const totalDemandUnits = Math.round(baseDemand);
     const localSupplierPrice = calculateBaseCityPrice(resource, city);
-    const playerDemandShare =
-      baseDemand * calculateDemandShareFromPrice(offerPrice, localSupplierPrice);
-    const playerDemandUnits = Math.round(playerDemandShare);
-    const soldAmount = availableInventory > 0
-      ? Math.min(playerDemandUnits, listedQuantity, availableInventory)
-      : 0;
-    const localSupplierSoldQuantity = Math.max(0, totalDemandUnits - soldAmount);
+    const lastTickPlayerPrice = findLastTickPlayerOfferPrice(
+      lastMarketplaceTick,
+      resource,
+    );
+    const averageNpcPrice =
+      lastTickPlayerPrice !== undefined
+        ? (localSupplierPrice + lastTickPlayerPrice) / 2
+        : localSupplierPrice;
+    const averageNpcOfferedQuantity = Math.max(0, Math.round(baseDemand * 0.2));
 
-    nextInventory[resource] -= soldAmount;
-    earnedMoney += soldAmount * offerPrice;
+    const playerMaxSellUnits = Math.min(listedQuantity, availableInventory);
+    const playerWeight = calculatePriceWeight(offerPrice);
+    const averageNpcWeight = calculatePriceWeight(averageNpcPrice);
+    const localSupplierWeight = calculatePriceWeight(localSupplierPrice);
+    const totalWeight = playerWeight + averageNpcWeight + localSupplierWeight;
+
+    let remainingDemandUnits = totalDemandUnits;
+    const playerTargetUnits = totalWeight > 0
+      ? Math.round((totalDemandUnits * playerWeight) / totalWeight)
+      : 0;
+    const playerSoldUnits = Math.min(playerTargetUnits, playerMaxSellUnits, remainingDemandUnits);
+    remainingDemandUnits -= playerSoldUnits;
+
+    const averageNpcTargetUnits = totalWeight > 0
+      ? Math.round((totalDemandUnits * averageNpcWeight) / totalWeight)
+      : 0;
+    const averageNpcSoldUnits = Math.min(
+      averageNpcTargetUnits,
+      averageNpcOfferedQuantity,
+      remainingDemandUnits,
+    );
+    remainingDemandUnits -= averageNpcSoldUnits;
+
+    const localSupplierSoldQuantity = Math.max(0, remainingDemandUnits);
+
+    nextInventory[resource] -= playerSoldUnits;
+    earnedMoney += playerSoldUnits * offerPrice;
     resourceResults.push({
       resource,
       baseDemand,
@@ -89,7 +123,13 @@ export function resolveCityMarketplaceTick(
           sellerName: "Player",
           offeredQuantity: listedQuantity,
           offerPrice,
-          soldQuantity: soldAmount,
+          soldQuantity: playerSoldUnits,
+        },
+        {
+          sellerName: "Average NPC",
+          offeredQuantity: averageNpcOfferedQuantity,
+          offerPrice: averageNpcPrice,
+          soldQuantity: averageNpcSoldUnits,
         },
         {
           sellerName: "Local Suppliers",
